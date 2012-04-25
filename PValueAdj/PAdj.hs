@@ -11,14 +11,12 @@
 -- 
 --
 -----------------------------------------------------------------------------
-
 module PAdj
        (
          bhFDR
        , bonferroni
        , rankAll
        )
-
        where
 
 import qualified Data.Vector.Unboxed as UV
@@ -39,7 +37,7 @@ bonferroni :: PValues -> PValues
 bonferroni pVec = UV.map (* (fromIntegral $ UV.length pVec)) pVec
   
 {-# INLINE rankAll #-}
--- | 等价于R中的rank
+-- | 等价于R中的rank，平均处理相同值的rank
 rankAll :: UV.Vector FloatType -> UV.Vector FloatType  
 rankAll vec =
   let n = UV.length vec

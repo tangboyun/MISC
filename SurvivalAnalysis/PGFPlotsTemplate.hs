@@ -46,6 +46,7 @@ survivalCurveTemplate = newSTMP
   \$censoredPoints$\n\
   \};\n\
   \\\\\addplot+[const plot,mark=none,$color$] coordinates{\n\
+  \% const plot : Connects all points with horizontal and vertical lines\n\
   \$coordinates$\n\
   \};\\\\addlegendentry{$legend$}\n"
 

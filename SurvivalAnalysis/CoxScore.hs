@@ -23,7 +23,6 @@ import           Control.Parallel.Strategies
 import           Data.List
 import qualified Data.Vector                 as V
 import qualified Data.Vector.Unboxed         as UV
-import           System.Random.MWC
  
 type FloatType = Double
 type ExpData = V.Vector (UV.Vector FloatType)

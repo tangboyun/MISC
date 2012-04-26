@@ -17,7 +17,6 @@ module RVM where
 import Numeric.LinearAlgebra
 import Numeric.Container
 import qualified Data.Vector as V
-import Control.Exception
 import Numeric.GSL.Distribution.Continuous
 import Numeric.GSL
 
@@ -56,7 +55,8 @@ getPfromT tV df tp =
   in cmap pf tV
 
 rvmTTest :: ExpData -> ExpData -> TestType -> Vector FloatType
-rvmTTest group1 group2 tp = getPfromT tCorrected (fromIntegral df) tp
+rvmTTest group1 group2 tp = 
+  getPfromT tCorrected (fromIntegral df) tp
   where                        
     n1 = V.length group1
     n2 = V.length group2

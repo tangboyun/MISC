@@ -6,9 +6,11 @@
 -- Maintainer : tangboyun@hotmail.com
 -- Stability : experimental
 -- Portability : ghc
---
--- 
---
+-- Reference :   George W. Wright and Richard M. Simon
+--               A random variance model for detection of differential gene
+--               expression in small microarray experiments
+--               Bioinformatics (2003) 19(18): 2448-2455
+--               doi:10.1093/bioinformatics/btg345
 -----------------------------------------------------------------------------
 module RVM where
 

@@ -85,7 +85,7 @@ rvmTTest group1 group2 tp = getPfromT tCorrected (fromIntegral df) tp
           derivB = fst $ derivCentral stepSize (fitF a) b
       in [derivA,derivB]
     fWrap [a,b] = fitF a b
-    [estA,estB] = fst $ 
+    [estA,estB] = fst $ -- transform original problem into a minimization problem
                   minimizeD VectorBFGS2 
                   precision maxIter stepSize 
                   precision fWrap calcPartialDeriv startP

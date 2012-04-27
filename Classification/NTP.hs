@@ -28,7 +28,7 @@ data P3 = P {-# UNPACK #-} !FloatType
 {-# INLINE cosSim #-}
 cosSim :: UV.Vector FloatType -> UV.Vector FloatType -> FloatType
 cosSim v1 v2 = 
-  let (P nu de1 de2) =
+  let P nu de1 de2 =
         UV.foldl' 
         (\(P n1 d1 d2) (x1,x2) -> 
           let n1' = n1 + x1*x2 
@@ -36,7 +36,7 @@ cosSim v1 v2 =
               d2' = d2 + x2*x2
           in P n1' d1' d2'
         ) (P 0 0 0) $ UV.zip v1 v2
-  in nu / (sqrt $ de1 * de2)
+  in nu / sqrt (de1 * de2)
 
 {-# INLINE cosDis #-}
 cosDis :: UV.Vector FloatType -> UV.Vector FloatType -> FloatType

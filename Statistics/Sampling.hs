@@ -14,15 +14,17 @@
 module Statistics.Sampling 
        (
          randomVecByFunc
+       , shuffle
        )
        where
 
-import qualified Data.Vector.Generic as G
-import qualified Data.Vector.Unboxed as UV
+import           Control.Monad
+import           Control.Monad.ST
+import qualified Data.Vector                 as V
+import qualified Data.Vector.Generic         as G
 import qualified Data.Vector.Generic.Mutable as GM
-import System.Random.MWC
-import Control.Monad.ST
-import Control.Monad
+import qualified Data.Vector.Unboxed         as UV
+import           System.Random.MWC
 
 {-# INLINE randomVecByFunc #-}
 {-# SPECIALIZE randomVecByFunc :: G.Vector v Double => Int -> Seed -> (forall s m . Gen s -> m Double) -> (v Double,Seed) #-}
@@ -39,3 +41,26 @@ randomVecByFunc len s f = runST $ do
   s' <- save gen
   vec' <- G.unsafeFreeze vec
   return (vec',s')
+
+{-# INLINE shuffle #-}
+{-# SPECIALIZE shuffle :: Seed -> UV.Vector Int -> (UV.Vector Int,Seed) #-}
+{-# SPECIALIZE shuffle :: Seed -> V.Vector Int -> (V.Vector Int,Seed) #-}
+{-# SPECIALIZE shuffle :: G.Vector v Int => Seed -> v Int -> (v Int,Seed) #-}
+-- | shuffle + unsafeBackpermute  
+shuffle :: G.Vector v a => Seed -> v a -> (v a,Seed)
+shuffle s v =
+  runST $ do
+    let len = G.length v
+        n   = len-1
+    mv <- GM.new len
+    gen <- initialize $ fromSeed s
+    G.unsafeCopy mv v
+    forM_ [0..n] $ \idx -> do
+      idx' <- uniformR (idx,n) gen
+      val_i <- GM.read mv idx
+      val_j <- GM.read mv idx'
+      GM.write mv idx val_j
+      GM.write mv idx' val_i
+    s' <- save gen
+    v' <- G.unsafeFreeze mv
+    return $ (v',s')

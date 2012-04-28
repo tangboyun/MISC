@@ -53,3 +53,4 @@ centering (K m) =
       e = sumElements d / fromIntegral l
       j = fromRows $ replicate l d
   in K $ m `sub` j `sub` trans j `add` scale e (ones l l)
+

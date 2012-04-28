@@ -13,8 +13,11 @@
 module Kernel.Internal.Types where
 
 
-import Numeric.LinearAlgebra
+import Data.Packed.Matrix
 
 
 type FloatType = Double
-newtype KernelMatrix = K (Matrix FloatType)
+-- | Kernel Matrix
+newtype KMatrix = K (Matrix FloatType)
+-- | Hessian Matrix
+newtype HMatrix = H (Matrix FloatType)

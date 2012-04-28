@@ -33,7 +33,9 @@ eps = 1e-6
 
 -- | http://en.wikipedia.org/wiki/PageRank
 pageRank :: Ord key => [(key,[key])] -> [(key,Double)]
-pageRank ps = zip (map fst ps) (toList $ go v last_v)
+pageRank ps = let ls = toList $ go v last_v
+                  s  = sum ls
+              in zip (map fst ps) (map (/ s) ls)
   where
     ks = map fst ps
     (g,_,_) = graphFromEdges $ 

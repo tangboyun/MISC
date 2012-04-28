@@ -12,7 +12,9 @@
 -----------------------------------------------------------------------------
 
 module PageRank
-       
+       (
+         pageRank
+       )
        where
 
 import Data.Graph
@@ -22,8 +24,6 @@ import Data.Tuple
 import Control.Monad.ST
 import System.Random.MWC
 import qualified Data.Vector.Storable as SV
-import Debug.Trace
-import Data.List
 
 dampingFactor :: Double
 dampingFactor = 0.85

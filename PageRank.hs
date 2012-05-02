@@ -60,7 +60,7 @@ pageRank ps = let ls = toList $ go v last_v
             scale ((1 - dampingFactor) / fromIntegral l)
             (ones l l)
     -- http://en.wikipedia.org/wiki/Power_iteration
-    -- 收敛于最大奇异值
+    -- 收敛于最大特征值
     go vec vec_ 
       | norm (vec `sub` vec_) > eps =
         let v' = m_hat <> vec 

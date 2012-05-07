@@ -21,12 +21,12 @@ import           Control.Monad.ST
 import           Control.Monad.State.Strict
 import           Data.List
 import           Data.Ord
+import qualified Data.Vector                as V
 import qualified Data.Vector.Unboxed        as UV
-import qualified Data.Vector as V
 import           GA.Internal
 import           GA.Types
+import           Statistics.Sampling
 import           System.Random.MWC
-import Statistics.Sampling
 
 -- | Roulette Wheel Selection
 -- http://en.wikipedia.org/wiki/Stochastic_universal_sampling

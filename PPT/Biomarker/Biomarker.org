@@ -1,0 +1,189 @@
+#+TITLE: Biomarker筛选与验证
+#+AUTHOR: Boyun Tang
+#+EMAIL: tangboyun@hotmail.com
+#+DATE:  %B %e, %Y
+#+LaTex_CLASS: my-presentation
+#+LaTeX_CLASS_OPTIONS: 
+#+LaTeX_HEADER: \usetikzlibrary{mindmap,shadows,shapes.geometric,matrix,arrows,positioning,calc,decorations.pathreplacing}
+#+LaTeX_HEADER: \usepackage{algorithm}
+#+LaTeX_HEADER: \usepackage{algorithmic}
+#+LaTeX_HEADER: \usepackage{pgfplots}
+#+LaTeX_HEADER: \usepackage{amsfonts}
+#+LaTeX_HEADER: \usetikzlibrary{plotmarks}
+#+LaTeX_HEADER: \def\colorize<#1>{\item\temporal<#1>{\color{black!30}}{\color{red}}{\color{black}}}
+#+LaTeX_HEADER: \usepackage{multicol}
+#+LaTeX_HEADER: \usepackage{booktabs}
+#+LaTeX_HEADER: \usepackage{array}
+#+BEAMER_HEADER_EXTRA:
+#+MACRO: BEAMERMODE presentation
+#+MACRO: BEAMERTHEME Frankfurt
+#+MACRO: BEAMERCOLORTHEME 
+#+MACRO: BEAMERSUBJECT 
+#+MACRO: BEAMERINSTITUTE 
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+LaTeX_HEADER: \setbeamertemplate{enumerate mini template}[ball]
+#+OPTIONS: num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+
+* 背景
+** 一般介绍
+*** 基于表达谱芯片的Biomarker筛选
+#+begin_src latex
+  \begin{block}{评价准则}
+     \begin{itemize}
+     \item 较好的预后预测 (Good prognostic value / prediction accuracy)
+     \item 稳定的生物学解读 (Functional similarity / Semantic similarity)
+     \end{itemize}
+  \end{block}
+  \pause
+  \begin{block}{难点与挑战}
+     \begin{itemize}
+     \item 属于高维拟合问题 $p \gg N $
+     \item Response值多为截尾数据
+     \end{itemize}
+  \end{block}
+#+end_src
+* 示例
+** 数据处理示例 
+*** 文献
+[[./nejm.png]]
+*** Follicular Lymphoma
+#+begin_src latex
+\centering 
+\includegraphics[width=.7\textwidth]{Lymphoma_macro.jpg}\\
+\caption{\small Median survival is around 10 years, but the range is wide, 
+from less than one year, to more than 20 years. Some patients may never need treatment. 
+The overall survival rate at 5 years is 72-77\%.
+}
+
+#+end_src
+
+*** 文章思路
+# 无法自动缩放到满意地程度，只能另开session运行。
+#+begin_src ditaa :file paper.png :exports none :session ditaa
+
+               /--------------------------------------\
+               | Follicular lymphoma biopsy specimens |
+               | cPNK      (191 samples)              |
+               \------------------+-------------------/
+                                  |
+                  /---------------+---------------------\
+                  |                                     | 
+                  v                                     v
+         +--------+------+                    +---------+--------+
+         | Training Set  |                    |    Testing Set   |
+         |  95 samples   |                    |    96 samples    |
+         | {s} cDB6      |                    | {s} cFF8         |  
+         +---------------+                    +------------------+
+                  |                                     |
+      /-----------+---------\                           |
+      |      Cox Score      |                           |
+ above|1.5             below|-1.5                       |
+      v                     v                           |
+/-----+------\       /------+------\                    |
+| Positive   |       |   Negative  |                    |
+|   Gene     |       |     Gene    |                    |
+| cRED       |       |    cGRE     |                    |
+\-----+------/       \------+------/                    |
+      |     Hierarchical    |                           |
+      v      Clustering     v                           |
+/-----+------\       /------+------\                    |
+| Clusters   |       |  Clusters   |                    |
+|   with     |       |    with     |                    |
+| 25~50 Genes|       | 25~50 Genes |                    |
+|    and     |       |    and      |                    |
+| corr above |       | corr above  |                    | 
+|    0.5     |       |     0.5     |                    |    
+|  cDBF      |       |   cDBF      |                    |
+\-----+------/       \------+------/                    |
+      |       Average       |                           |
+      v        Value        v                           |
+/-----+------\       /------+------\                    |
+|Super gene1 |       | Super gene2 |                    |
+|   cRED     |       |     cGRE    |                    |
+\-----+------/       \------+------/                    |
+      |                     |                           |
+      \----------+----------/                           |
+                 | Cox Regression                       |
+                 v                                      v
+      /----------+---------\                  /---------+---------\
+      | Multivariate model +----------------->+     Validation    |
+      |        cBLU        |                  |     {c}  c9FB     |
+      \--------------------/                  \-------------------/
+#+end_src
+
+#+begin_src latex
+\begin{center}
+ \includegraphics[width=0.68\textwidth]{paper.png}
+\end{center}
+#+end_src
+*** 结果
+#+ATTR_LaTeX: width=0.8\textwidth
+[[./curve.png]]
+*** 深入分析
+#+begin_src latex
+  
+  \begin{overprint}
+  \onslide<1>
+  \begin{block}{疑点}
+    \begin{center}
+      \includegraphics[width=.4\textwidth,angle=-90]{fig1.pdf}
+    \end{center}
+    \begin{itemize}
+    \small
+    \item Total points (Clustering pairs): \textcolor{blue}{11628}
+    \item Points on testing set with $p < 0.05$: \textcolor{red}{239}
+    \end{itemize}
+  \end{block}
+  \onslide<2>
+  \begin{exampleblock}{比较}
+    \begin{columns}[T]
+      \begin{column}{.5\textwidth}
+        \centering
+        \includegraphics[width=.8\textwidth,angle=-90]{fig1.pdf}\\
+        \caption{\textcolor{blue}{\textbf 原始数据}}
+      \end{column}
+  
+      \begin{column}{.5\textwidth}
+        \centering
+        \includegraphics[width=.8\textwidth,angle=-90]{fig1s.pdf}\\
+        \caption{\textcolor{red}{\textbf 互换训练集测试集}}
+      \end{column}
+    \end{columns}
+  
+  \end{exampleblock}
+  \onslide<3>    
+  \begin{exampleblock}{比较}
+    \begin{columns}[T]
+      \begin{column}{.5\textwidth}
+        \centering
+        \includegraphics[width=.8\textwidth,angle=-90]{fig1.pdf}\\
+        \caption{\textcolor{blue}{\textbf 原始数据\\聚类区间(25,50)}}
+      \end{column}
+  
+      \begin{column}{.5\textwidth}
+        \centering
+        \includegraphics[width=.8\textwidth,angle=-90]{fig13060.pdf}\\
+        \caption{\textcolor{red}{\textbf 聚类区间(30,60)}}
+      \end{column}
+    \end{columns}
+  \end{exampleblock}
+  \onslide<4>
+  \begin{block}{结论}
+    \begin{itemize}
+      \item 看似完美的数据，未必\textcolor{red}{\textbf 可靠}，很可能仅仅是由于\textcolor{red}{\textbf 过拟合}
+      \item 稳健的分析结果，必须经得起\textcolor{blue}{Permutation test}的反复验证。 
+    \end{itemize}
+  \end{block}
+  \end{overprint}
+#+end_src
+
+*** 参考链接
+#+begin_src latex
+  
+  \begin{itemize}
+    \item \url{http://www.nejm.org/doi/full/10.1056/NEJMoa041869}
+    \item \url{http://www-stat.stanford.edu/~tibs/FL/report/}
+  \end{itemize}
+  
+#+end_src

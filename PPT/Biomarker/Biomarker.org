@@ -43,9 +43,12 @@
      \end{itemize}
   \end{block}
 #+end_src
+*** 许多已发表的肿瘤相关Gene Signature并不严谨
+[[./randomsig.png]]
+**** 随机化的重复验证很重要
 * 示例
 ** 数据处理示例 
-*** 文献
+*** 示例文献
 [[./nejm.png]]
 *** Follicular Lymphoma
 #+begin_src latex
@@ -117,9 +120,11 @@ The overall survival rate at 5 years is 72-77\%.
  \includegraphics[width=0.68\textwidth]{paper.png}
 \end{center}
 #+end_src
+
 *** 结果
 #+ATTR_LaTeX: width=0.8\textwidth
 [[./curve.png]]
+
 *** 深入分析
 #+begin_src latex
   

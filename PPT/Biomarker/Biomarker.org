@@ -60,43 +60,53 @@
 
 ** 半监督聚类
 *** Semi-supervised clustering
+
 #+begin_src latex
-    
-    \begin{overprint}
-      \onslide<1>
-      \begin{center}
-        \includegraphics[width=\textwidth]{semi-cluster1.png}
-      \end{center}
-      \onslide<2>
-      \begin{center}
-        
-      \end{center}
-    \end{overprint}
-    
-    
+  
+  \begin{overprint}
+    \onslide<1>
+    \centering
+    \begin{block}{特点}
+    \begin{itemize}
+      \item \textbf{适用场合：} 待检测癌症的生物学亚型尚未明确。
+      \item \textbf{目的：} 寻找与临床表型相关的基因簇。
+    \end{itemize}
+    \end{block}
+    \onslide<2>
+    \begin{block}{代表文献}
+      \centering
+      \includegraphics[width=.8\textwidth]{semi-cluster1.png}
+    \end{block}
+    \onslide<3>
+  \end{overprint}
+  
+  
 #+end_src
 ** 半监督分类
 *** Semi-supervised classification
 #+begin_src latex
-    
-    \begin{overprint}
-      \onslide<1>
-      \begin{center}
-      \end{center}
-      \onslide<2>
-      \begin{center}
-        \includegraphics[width=\textwidth]{semi-class1.png}
-      \end{center}
-      \onslide<3>
-      \onslide<4>
-      \begin{center}
-        \includegraphics[width=\textwidth]{semi-class2.png}
-      \end{center}
-
-      \onslide<5>
-    \end{overprint}
-    
-    
+  \begin{overprint}
+    \onslide<1>
+    \begin{block}{特点}
+      \begin{itemize}
+      \item \textbf{适用场合：} 只需要将患者简单的归类，特别是只需要二类标签。
+      \item \textbf{目的：} 得到能够将未知的样本划分为“好的预后”与“差的预后”的分类模型。
+      \end{itemize}
+    \end{block}
+    \onslide<2>
+    \begin{block}{代表文献1}
+      \centering
+      \includegraphics[width=.8\textwidth]{semi-class1.png}
+    \end{block}
+    \onslide<3>
+    \onslide<4>
+    \begin{block}{代表文献2}
+      \centering
+      \includegraphics[width=.8\textwidth]{semi-class2.png}
+    \end{block}
+    \onslide<5>
+  \end{overprint}
+  
 #+end_src 
 
 ** Cox拟合
@@ -105,37 +115,40 @@
   
   \begin{overprint}
     \onslide<1>
+    \begin{block}{特点}
+      \begin{itemize}
+      \item \textbf{适用场合：} 对给定患者给出一个实值评分，适合临床诊断指标比较完善的癌症。
+      \item \textbf{目的：} 可以与现有的诊断指标灵活地结合，自定义评价准则。
+      \end{itemize}
+    \end{block}
     
     \onslide<2>
-    \begin{center}
-      \includegraphics[width=\textwidth]{nejm.png}
-    \end{center}
+    \begin{block}{代表文献1}
+      \centering
+      \includegraphics[width=.8\textwidth]{nejm.png}
+    \end{block}
     \onslide<3>
-    \begin{center}
-      \includegraphics[width=\textwidth]{cox-reg2.png}
-    \end{center}
+    \begin{block}{统计学前沿}
+      \centering
+      \includegraphics[width=.8\textwidth]{cox-reg2.png}
+    \end{block}
   
   \end{overprint}
   
 #+end_src
+
 ** 结果的验证
 *** Stratified cross validation
 #+begin_src latex
   \begin{overprint}
-  
     \onslide<1>
-    
     \begin{center}
-      
+      \includegraphics[width=\textwidth]{stracv.png}
     \end{center}
-  
-    
     \onslide<2>
-    
     \begin{center}
-      
+      \includegraphics[width=\textwidth]{../../LaTeX/StratifiedCV.pdf}
     \end{center}
-  
   \end{overprint}
   
 #+end_src

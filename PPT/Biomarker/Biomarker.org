@@ -1,4 +1,4 @@
-#+TITLE: Biomarker筛选与验证
+#+TITLE: Biomarker筛选与验证平台
 #+AUTHOR: Boyun Tang
 #+EMAIL: tangboyun@hotmail.com
 #+DATE:  %B %e, %Y
@@ -45,7 +45,100 @@
 #+end_src
 *** 许多已发表的肿瘤相关Gene Signature并不严谨
 [[./randomsig.png]]
-**** 随机化的重复验证很重要
+**** 可重复性验证很重要
+* 筛选策略及其代表文献
+** 总体思路
+*** Biomarker筛选策略
+#+begin_src latex
+\begin{center}
+  \includegraphics[width=.7\textwidth]{../../LaTeX/BioMarkerScreening.pdf}
+\end{center}
+
+#+end_src
+
+*** 各种解决方案的适用场合
+
+** 半监督聚类
+*** Semi-supervised clustering
+#+begin_src latex
+    
+    \begin{overprint}
+      \onslide<1>
+      \begin{center}
+        \includegraphics[width=\textwidth]{semi-cluster1.png}
+      \end{center}
+      \onslide<2>
+      \begin{center}
+        
+      \end{center}
+    \end{overprint}
+    
+    
+#+end_src
+** 半监督分类
+*** Semi-supervised classification
+#+begin_src latex
+    
+    \begin{overprint}
+      \onslide<1>
+      \begin{center}
+      \end{center}
+      \onslide<2>
+      \begin{center}
+        \includegraphics[width=\textwidth]{semi-class1.png}
+      \end{center}
+      \onslide<3>
+      \onslide<4>
+      \begin{center}
+        \includegraphics[width=\textwidth]{semi-class2.png}
+      \end{center}
+
+      \onslide<5>
+    \end{overprint}
+    
+    
+#+end_src 
+
+** Cox拟合
+*** Cox regression
+#+begin_src latex
+  
+  \begin{overprint}
+    \onslide<1>
+    
+    \onslide<2>
+    \begin{center}
+      \includegraphics[width=\textwidth]{nejm.png}
+    \end{center}
+    \onslide<3>
+    \begin{center}
+      \includegraphics[width=\textwidth]{cox-reg2.png}
+    \end{center}
+  
+  \end{overprint}
+  
+#+end_src
+** 结果的验证
+*** Stratified cross validation
+#+begin_src latex
+  \begin{overprint}
+  
+    \onslide<1>
+    
+    \begin{center}
+      
+    \end{center}
+  
+    
+    \onslide<2>
+    
+    \begin{center}
+      
+    \end{center}
+  
+  \end{overprint}
+  
+#+end_src
 * 示例
 ** 数据处理示例 
 *** 示例文献
@@ -192,3 +285,4 @@ The overall survival rate at 5 years is 72-77\%.
   \end{itemize}
   
 #+end_src
+* 平台总体的设计

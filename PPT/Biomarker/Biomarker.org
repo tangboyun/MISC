@@ -94,6 +94,8 @@
       \includegraphics[width=.8\textwidth]{semi-cluster1.png}
     \end{block}
     \onslide<3>
+      \centering
+      \includegraphics[width=.9\textwidth]{../../LaTeX/SemiCluster1.pdf}
   \end{overprint}
   
   

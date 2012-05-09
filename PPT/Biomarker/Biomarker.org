@@ -25,6 +25,8 @@
 #+OPTIONS: num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
 #+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 
+
+
 * 背景
 ** 一般介绍
 *** 基于表达谱芯片的Biomarker筛选
@@ -55,9 +57,23 @@
 \end{center}
 
 #+end_src
-
-*** 各种解决方案的适用场合
-
+** 结果的验证
+*** Stratified cross validation
+#+begin_src latex
+  \begin{overprint}
+    \onslide<1>
+    \begin{center}
+      \includegraphics[width=\textwidth]{stracv.png}
+    \end{center}
+    \onslide<2>
+    \begin{center}
+      \includegraphics[width=\textwidth]{../../LaTeX/StratifiedCV.pdf}
+    \end{center}
+  \end{overprint}
+  
+#+end_src
+    
+    
 ** 半监督聚类
 *** Semi-supervised clustering
 
@@ -137,21 +153,6 @@
   
 #+end_src
 
-** 结果的验证
-*** Stratified cross validation
-#+begin_src latex
-  \begin{overprint}
-    \onslide<1>
-    \begin{center}
-      \includegraphics[width=\textwidth]{stracv.png}
-    \end{center}
-    \onslide<2>
-    \begin{center}
-      \includegraphics[width=\textwidth]{../../LaTeX/StratifiedCV.pdf}
-    \end{center}
-  \end{overprint}
-  
-#+end_src
 * 示例
 ** 数据处理示例 
 *** 示例文献

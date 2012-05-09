@@ -123,6 +123,8 @@
       \includegraphics[width=.8\textwidth]{semi-class2.png}
     \end{block}
     \onslide<5>
+      \centering
+      \includegraphics[width=.65\textwidth]{../../LaTeX/SemiClass2.pdf}
   \end{overprint}
   
 #+end_src 

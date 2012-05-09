@@ -115,6 +115,8 @@
       \includegraphics[width=.8\textwidth]{semi-class1.png}
     \end{block}
     \onslide<3>
+      \centering
+      \includegraphics[width=.55\textwidth]{../../LaTeX/SemiClass1.pdf}
     \onslide<4>
     \begin{block}{代表文献2}
       \centering

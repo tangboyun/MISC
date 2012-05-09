@@ -54,14 +54,14 @@
   draw=blue!40!black,dr] {};
   \node (frameword) [text=blue!50!black,
   anchor=north west,yshift=0.1cm] at (frame.north west) {Jack Knife\\Resampling};  
-  \node (cox) [below=of frame.north,re,o] {Cox Score\\Permutation Test};
+  \node (cox) [below=of frame.north,re,o,dr] {Cox Score\\Permutation Test};
 
-  \node (can) [below=of cox,re,c,yshift=0.3cm] {Candidate Genes};
+  \node (can) [below=of cox,re,c,yshift=0.3cm,dr] {Candidate Genes};
 
-  \node (tmpp) [below=of can,fill=red!60,draw=red!60!black,yshift=0.3cm,minimum height=0.1cm] {};
-  \node (tmpn) [below=of can,fill=green!60,draw=green!60!black,yshift=0cm,minimum height=0.1cm] {};
+  \node (tmpp) [dr,below=of can,fill=red!60,draw=red!60!black,yshift=0.3cm,minimum height=0.1cm] {};
+  \node (tmpn) [dr,below=of can,fill=green!60,draw=green!60!black,yshift=0cm,minimum height=0.1cm] {};
   \node (tmp) [below=of can,yshift=0.5cm,font=\large] {Template};
-  \node (class) [below=of tmp,top color= red,bottom color= green,
+  \node (class) [dr,below=of tmp,top color= red,bottom color= green,
   font=\small,yshift=0.6cm,re] {Classification\\with\\FDR Control};
   \node (sig) [below=of frame,re,b] {Signature};
   \path let \p1 = (sig.center), \p2=(test.center) in node (valid) [v,re] at (\x2,\y1) {Validation}; 

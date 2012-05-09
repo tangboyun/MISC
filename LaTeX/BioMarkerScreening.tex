@@ -10,53 +10,55 @@
 \usepackage{xcolor}
 \begin{document}
 \begin{tikzpicture}[
-  every node/.style={rounded corners,minimum height=1cm,align=center},%
+  every node/.style={minimum height=1cm,align=center},%
+  d/.style={rounded corners},%
+  cl/.style={cylinder,aspect=.3,shape border rotate=90,},%
   e/.style={->,ultra thick,rounded corners,cyan!50!black},%
   t/.style={midway,token,fill=red,font=\large},%
   ]
 
-  \node (data) [cylinder,aspect=.3,shape border rotate=90,
+  \node (data) [cl,
   top color= cyan!30,bottom color= cyan!10,draw=cyan!30!black,
   text=cyan!50!black,
   drop shadow,
   ] {Gene expression data\\($> 10^4$ genes)};
 
-  \node (candidate) [
+  \node (candidate) [d,
   below =of data,drop shadow,
   top color= cyan!60,bottom color= cyan!10,draw=cyan!60!black,
   text=cyan!50!black,
   yshift = -0.5cm,
   ] {Prognosis associated candidates\\($\sim 10^3$ genes)};
 
-  \node (classification) [
+  \node (classification) [d,
   below =of candidate,drop shadow,
   top color= red!60,bottom color= red!10,draw=red!60!black,
   text=red!50!black,
   yshift = -0.5cm,
   ] {Semi-supervised\\classification};
 
-  \node (clustering) [
+  \node (clustering) [d,
   left = of classification,drop shadow,
   top color= green!60,bottom color= green!10,draw=green!60!black,
   text=green!50!black,
   xshift=-0.5cm,
   ] {Semi-supervised\\clustering};
 
-  \node (regression) [
+  \node (regression) [d,
   right = of classification,drop shadow,
   top color= blue!60,bottom color= blue!10,draw=blue!60!black,
   text=blue!60!black,
   xshift=0.5cm,
   ] {Cox regression};
 
-  \node (signature) [
+  \node (signature) [d,
   below = of classification,drop shadow,
   top color= cyan,bottom color= cyan!30,draw=cyan!70!black,
   text=cyan!70!black,
   yshift=-0.5cm,
   ] {Gene signature\\($10^1\sim 10^2$ genes)};
  
-  \node (validation) [
+  \node (validation) [d,
   below = of signature,drop shadow,
   top color= violet!60,bottom color= violet!10,draw=violet!60!black,
   text=violet!60!black,

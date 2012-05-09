@@ -168,66 +168,16 @@ The overall survival rate at 5 years is 72-77\%.
 #+end_src
 
 *** 文章思路
-# 无法自动缩放到满意地程度，只能另开session运行。
-#+begin_src ditaa :file paper.png :exports none :session ditaa
-
-               /--------------------------------------\
-               | Follicular lymphoma biopsy specimens |
-               | cPNK      (191 samples)              |
-               \------------------+-------------------/
-                                  |
-                  /---------------+---------------------\
-                  |                                     | 
-                  v                                     v
-         +--------+------+                    +---------+--------+
-         | Training Set  |                    |    Testing Set   |
-         |  95 samples   |                    |    96 samples    |
-         | {s} cDB6      |                    | {s} cFF8         |  
-         +---------------+                    +------------------+
-                  |                                     |
-      /-----------+---------\                           |
-      |      Cox Score      |                           |
- above|1.5             below|-1.5                       |
-      v                     v                           |
-/-----+------\       /------+------\                    |
-| Positive   |       |   Negative  |                    |
-|   Gene     |       |     Gene    |                    |
-| cRED       |       |    cGRE     |                    |
-\-----+------/       \------+------/                    |
-      |     Hierarchical    |                           |
-      v      Clustering     v                           |
-/-----+------\       /------+------\                    |
-| Clusters   |       |  Clusters   |                    |
-|   with     |       |    with     |                    |
-| 25~50 Genes|       | 25~50 Genes |                    |
-|    and     |       |    and      |                    |
-| corr above |       | corr above  |                    | 
-|    0.5     |       |     0.5     |                    |    
-|  cDBF      |       |   cDBF      |                    |
-\-----+------/       \------+------/                    |
-      |       Average       |                           |
-      v        Value        v                           |
-/-----+------\       /------+------\                    |
-|Super gene1 |       | Super gene2 |                    |
-|   cRED     |       |     cGRE    |                    |
-\-----+------/       \------+------/                    |
-      |                     |                           |
-      \----------+----------/                           |
-                 | Cox Regression                       |
-                 v                                      v
-      /----------+---------\                  /---------+---------\
-      | Multivariate model +----------------->+     Validation    |
-      |        cBLU        |                  |     {c}  c9FB     |
-      \--------------------/                  \-------------------/
-#+end_src
 
 #+begin_src latex
 \begin{center}
- \includegraphics[width=0.68\textwidth]{paper.png}
+ \includegraphics[width=.6\textwidth]{../../LaTeX/NEJM2004.pdf}
 \end{center}
 #+end_src
 
+
 *** 结果
+
 #+ATTR_LaTeX: width=0.8\textwidth
 [[./curve.png]]
 

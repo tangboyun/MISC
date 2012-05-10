@@ -25,8 +25,6 @@
 #+OPTIONS: num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
 #+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 
-
-
 * 背景
 ** 一般介绍
 *** 基于表达谱芯片的Biomarker筛选
@@ -256,3 +254,6 @@ The overall survival rate at 5 years is 72-77\%.
   
 #+end_src
 * 平台总体的设计
+** 模组化平台
+*** 筛选平台
+#+latex: \centering\includegraphics[width=\textwidth]{../../LaTeX/Platform.pdf}

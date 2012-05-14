@@ -25,6 +25,7 @@
 #+OPTIONS: num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
 #+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 
+
 * 背景
 ** 一般介绍
 *** 基于表达谱芯片的Biomarker筛选
@@ -72,6 +73,48 @@
 #+end_src
     
     
+** 半监督学习
+*** Semi-supervised learning
+#+begin_src latex
+  \begin{overprint}
+    \onslide<1>
+    在有“标签”的数据较少时，如何利用无标签数据，来改善分类性能？\\
+    \centering
+    \includegraphics[width=\textwidth]{semi-learning.png}
+    \onslide<2>
+    
+    \begin{block}{策略}
+      \begin{itemize}
+        \item Generative Model
+        \item Co-training
+        \item Graph-based
+      \end{itemize}
+    \end{block}
+  
+    \onslide<3>
+    \begin{exampleblock}{\textbf{示例}：Co-training}
+      淋巴瘤的芯片数据目前已有很多，但不少缺乏相应存活数据。\\
+      对于淋巴瘤的存活预期，已有一定的诊断指标，如IPI(International Prognostic Index):\\
+      \centering
+      
+      \begin{itemize}
+        \item Age greater than 60 years
+        \item Stage III or IV disease
+        \item Elevated serum LDH
+        \item ECOG/Zubrod performance status of 2, 3, or 4
+        \item More than 1 extranodal site
+      \end{itemize}
+  
+    \end{exampleblock}
+    \onslide<4>
+    
+    \begin{exampleblock}{\textbf{示例}：Co-training}
+      \centering
+      \includegraphics[width=.7\textwidth]{../../LaTeX/Co-training.pdf}
+    \end{exampleblock}
+  \end{overprint}
+
+#+end_src   
 ** 半监督聚类
 *** Semi-supervised clustering
 

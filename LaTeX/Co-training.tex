@@ -1,15 +1,13 @@
-%%% SemiCluster1.tex --- 
-%% Version: $Id: SemiCluster1.tex,v 0.0 2012/05/09 09:17:01 tangboyun Exp$
+%%% Co-training.tex --- 
+%% Version: $Id: Co-training.tex,v 0.0 2012/05/14 03:14:46 tangboyun Exp$
 %% Copyright : (c) 2012 Boyun Tang
 %% License : BSD-style
-
 \documentclass{standalone}
 \usepackage{tikz}
-\usetikzlibrary{mindmap,shadows,shapes,positioning,calc,}
+\usetikzlibrary{mindmap,shadows,shapes.arrows,shapes.geometric,shapes.misc,matrix,arrows,positioning,calc,decorations.pathreplacing,petri}
 \usepackage{graphicx}
 \usepackage{times}
 \usepackage{xcolor}
-
 \begin{document}
 
 \begin{tikzpicture}[
@@ -36,45 +34,21 @@
     text=pink!50!black,},%
   c/.style={top color= cyan!60,bottom color= cyan!10,draw=cyan!50!black,%
     text=cyan!50!black,},%
-  a/.style={single arrow,draw,bottom color=red,top color=white,shape border uses incircle,
-    shape border rotate=-90,minimum height=.85cm,minimum width=0.1cm,scale=.5}
+  a/.style={double arrow,draw,bottom color=red,top color=white,shape border uses incircle,
+    minimum height=2cm,minimum width=0.1cm,scale=.8}
   ]
-
-  \node (sample) [re,p,dr%
-  ] {Gene Expression Data};
-
-  \node (train) [cl,below=of sample,xshift=-4cm,br,dr%
-  ] {Training Set};
-
-  \node (test) [cl,below=of sample,xshift=4cm,ye,dr%
-  ] {Testing Set};
-  
-  \node (tt) [below=of train,re,o,dr] {Cox Score};
-
-  \node (can) [below=of tt,re,c,yshift=0.3cm,dr] {Candidate Genes};
-
-  \node (cox) [dr,below=of can,g,
-  font=\small,yshift=0.3cm,re] {Clustering-Cox};
-  \node (pc) [dr,left=of cox,r,font=\small,re] {Supervised PC};
-  \node (pls) [dr,right=of cox,b,font=\small,re] {Clustering-PLS};
-  \node (sig) [dr,below=of cox,re,p] {Signature};
-
-  \path let \p1 = (sig.center), \p2=(test.center) in node (valid) [v,re,dr] at (\x2,\y1) {Validation}; 
-  \draw [e] (train) -- (tt);
-  \draw [e] (tt) -- (can);
-  \draw [e] (can) -- (pc);
-  \draw [e] (can) -- (pls);
-  \draw [e] (can) -- (cox);
-  \draw [e] (cox) -- (sig);
-  \draw [e] (pc) -- (sig);
-  \draw [e] (pls) -- (sig);
-  \draw [e] (test) -- (valid);
-  \draw [e] (sig) -- (valid);
-  \draw [e] (sample) -- (train);
-  \draw [e] (sample) -- (test);
+  \node (la) [dr,re,b] {Labeled Data};
+  \node (ul) [dr,re,c,minimum width=8cm,minimum height=2cm,below=of la] {};
+  \node (ulf) [below=of la,yshift=0.3cm,text=cyan!50!black] {Unlabedled Data};
+  \node (cl1) [dr,re,r,below=of la,xshift=-2.5cm,yshift=-.6cm] {Classifier1\\(Gene Expression)};
+  \node (cl2) [dr,re,g,below=of la,xshift=2.5cm,yshift=-.6cm,minimum width=2.85cm] {Classifier2\\(Clinical Data)};  
+  \node (co) [below=of ulf,text=red,yshift=0.5cm] {Co-training};
+  \node (bc) [below=of ul,v,dr,re] {Better Classifier};
+  \path (cl1) -- (cl2) node [a,midway] {};
+  \draw [e] (la) -- (ul);
+  \draw [e] (ul) -- (bc);
 \end{tikzpicture}
 \end{document}
-
 
 %%% Local Variables: 
 %%% TeX-master: t

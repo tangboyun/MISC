@@ -59,10 +59,10 @@
   \node (can) [below=of tt,re,c,yshift=0.3cm,dr] {Candidate Genes};
 
   \node (class) [dr,below=of can,g,
-  font=\small,yshift=0.3cm,re] {Classification\\with LDA};
-  \node (sig) [below=of frame,re,b] {Signature};
+  font=\small,yshift=0.3cm,re] {Classification\\with LDS};
+  \node (sig) [below=of frame,re,b,dr] {Signature};
 
-  \path let \p1 = (sig.center), \p2=(test.center) in node (valid) [v,re] at (\x2,\y1) {Validation}; 
+  \path let \p1 = (sig.center), \p2=(test.center) in node (valid) [v,re,dr] at (\x2,\y1) {Validation}; 
   \path let \p3 = (sample.center), \p4=(class.center) in node (unsam) [re,r,dr,] at (\x3,\y4) {Unlabeled Samples};
   \path let \p5 = (unsam.center), \p6=(sig.center) in node (point) [] at (\x5,\y6) {};
   \draw [e] (test) -- (valid);

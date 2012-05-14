@@ -40,7 +40,8 @@
   \node (plat)  [re,dr,br] {Platform};
   \node (gs) [below=of plat,xshift=-3cm,re,dr,ye,minimum width=3.5cm] {RVM $t$-Test\\Correlation Coefficient\\Cox Score\\$\ldots$};
   \node (model) [below=of plat,xshift=3cm,re,dr,b,minimum width=3.5cm] {NTP\\LDS\\Cox\\$\ldots$};
-  \node (report) [below=of plat,yshift=-3cm,re,dr,g] {$p$ values,$R^2$\\Survival curve\\ROC,AUC\\Diagrams\\$\ldots$};
+  \node (report) [below=of plat,yshift=-3cm,re,dr,g] 
+  {$p$ values,$R^2$\\Survival curve\\ROC,AUC\\Diagrams\\Functional enrichment\\Literature match\\$\ldots$};
   \draw[decorate,decoration={brace},ultra thick,] ($(model.north east) + (.1cm,0)$) to
   node[midway,right,xshift=-.3cm] (bracket) {\textbf{Model}\\\textbf{Selection}}
   ($(model.south east) + (.1cm,0)$);

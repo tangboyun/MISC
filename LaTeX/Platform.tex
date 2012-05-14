@@ -47,6 +47,7 @@
   ($(model.south east) + (.1cm,0)$);
 
   \path (gs) -- (model) node [midway,a] {};
+  \path (gs) -- (model) node [midway,below] {\textbf{Customization}};
   \draw[decorate,decoration={brace},ultra thick,] ($(gs.south west) + (-.1cm,0)$) to
   node[midway,left,xshift=.3cm] (bracket) {\textbf{Gene}\\\textbf{Selection}}
   ($(gs.north west) + (-.1cm,0)$);

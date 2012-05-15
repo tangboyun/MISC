@@ -43,14 +43,27 @@ expDisFromCentre (K m) =
      sumElements d / l -
      sumElements m / (l * l)
 
+rowMean :: Matrix FloatType -> Matrix FloatType
+rowMean m = 
+  let n = rows m
+      p = cols m    
+  in cmap (/ fromIntegral p) $ m <> ones n 1
+
+colMean :: Matrix FloatType -> Matrix FloatType
+colMean m =
+  let n = rows m
+      p = cols m    
+  in cmap (/ fromIntegral n) $ ones 1 p <> m
+
 -- | Centering points in kernel space
 centering :: KMatrix -> KMatrix
 centering (K m) = 
   let l = rows m
-      d = fromList $ 
-          map ((/ fromIntegral l) . sumElements) $ 
-          toColumns m
-      e = sumElements d / fromIntegral l
-      j = fromRows $ replicate l d
-  in K $ m `sub` j `sub` trans j `add` scale e (ones l l)
+      l' = fromIntegral l
+      d = colMean m
+      e = sumElements d / l'
+      j = ones l 1 <> d
+  in K $ m `sub` j `sub` 
+         trans j `add` 
+         scale (e) (ones l l)
 

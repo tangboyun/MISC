@@ -1,0 +1,64 @@
+%%% Pipeline.tex --- 
+%% Version: $Id: Pipeline.tex,v 0.0 2012/05/16 02:34:37 tangboyun Exp$
+%% Copyright : (c) 2012 Boyun Tang
+%% License : BSD-style
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{mindmap,shadows,shapes.arrows,shapes.geometric,shapes.misc,matrix,arrows,positioning,calc,decorations.pathreplacing,petri}
+\usepackage{graphicx}
+\usepackage{times}
+\usepackage{xcolor}
+\usepackage{xeCJK}
+\setmainfont[Mapping=tex-text]{Times New Roman}%英文字体
+\setCJKmainfont[Scale=0.9,Mapping=tex-text]{DejaVu Sans YuanTi Condensed}%中文字体
+\setCJKmonofont[Scale=0.9,Mapping=tex-text]{DejaVu Sans YuanTi Mono}
+\setCJKfamilyfont{mono}{YaHei Consolas Hybrid}
+
+\begin{document}
+\begin{tikzpicture}[
+  every node/.style={minimum width=2.5cm,minimum height=1cm,align=center,},%
+  dr/.style={drop shadow},%
+  e/.style={->,ultra thick,rounded corners,draw=blue!50!gray},%
+  cl/.style={cylinder,aspect=.3,shape border rotate=90,},%
+  re/.style={rounded corners,},%
+  r/.style={top color= red!60,bottom color= red!10,draw=red!50!black,%
+    text=red!50!black,},%
+  g/.style={top color= green!60,bottom color= green!10,draw=green!50!black,%
+    text=green!50!black,},%
+  b/.style={top color= blue!60,bottom color= blue!10,draw=blue!50!black,%
+    text=blue!50!black,},%
+  br/.style={top color= brown!60,bottom color= brown!10,draw=brown!50!black,%
+    text=brown!50!black,},%
+  v/.style={top color= violet!60,bottom color= violet!10,draw=violet!50!black,%
+    text=violet!50!black,},%
+  o/.style={top color= orange!60,bottom color= orange!10,draw=orange!50!black,%
+    text=orange!50!black,},%
+  ye/.style={top color= yellow!60,bottom color= yellow!10,draw=yellow!50!black,%
+    text=yellow!50!black,},%
+  p/.style={top color= pink!60,bottom color= pink!10,draw=pink!50!black,%
+    text=pink!50!black,},%
+  c/.style={top color= cyan!60,bottom color= cyan!10,draw=cyan!50!black,%
+    text=cyan!50!black,},%
+  ]
+  \node (exp) [re,dr,o] {表达谱芯片};
+  \node (sam) [re,dr,p,below=of exp,xshift=-4cm] {RNA样本\\(无存活数据亦可)};
+  \node (can) [re,dr,c,below=of exp] {Gene Signature};
+  \node (pcr) [re,dr,r,below=of can] {qPCR array};
+  \node (val) [re,dr,g,right=of pcr] {模型验证};
+  \node (sol) [re,dr,b,above=of val] {解决方案};
+  \draw [e] (sam) -- (exp);
+  \draw [e] (sam) -- (pcr);
+  \draw [e] (exp) -- (can);
+  \draw [e] (can) -- (pcr);
+  \draw [e] (pcr) -- (val);
+  \draw [e] (val) -- (sol);
+  \path (exp) -- (can) node [midway,right] {Gene Selection\\(根据需要定制)};
+  \path (can) -- (pcr) node [midway,right] {Pathway ranking\\(根据qPCR产品)};
+
+\end{tikzpicture}
+
+\end{document}
+
+%%% Local Variables: 
+%%% TeX-master: t
+%%% End: 

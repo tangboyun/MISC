@@ -1,4 +1,4 @@
-#+TITLE: Biomarker筛选与验证平台
+#+TITLE: Gene Signature筛选与验证平台
 #+AUTHOR: Boyun Tang
 #+EMAIL: tangboyun@hotmail.com
 #+DATE:  %B %e, %Y
@@ -28,33 +28,55 @@
 
 * 背景
 ** 一般介绍
-*** 基于表达谱芯片的Biomarker筛选
+*** 基于表达谱芯片的Gene Signature筛选
 #+begin_src latex
+  
+  \begin{block}{定义}
+    
+    \begin{itemize}
+      \item 一个\textcolor{red}{基因集合}
+      \item 一个将基因表达数据转变成预后预测的\textcolor{red}{算法}
+    \end{itemize}
+  \end{block}
   \begin{block}{评价准则}
      \begin{itemize}
-     \item 较好的预后预测 (Good prognostic value / prediction accuracy)
-     \item 稳定的生物学解读 (Functional similarity / Semantic similarity)
+     \item \textcolor{red}{准确}的预后预测 (Good prognostic value / prediction accuracy)
+     \item \textcolor{red}{稳定}的生物学解读 (Functional similarity / Semantic similarity)
      \end{itemize}
   \end{block}
-  \pause
   \begin{block}{难点与挑战}
      \begin{itemize}
-     \item 属于高维拟合问题 $p \gg N $
-     \item Response值多为截尾数据
+     \item 属于\textbf{高维}拟合问题 $p \gg N $
+     \item Response值多为\textbf{截尾}数据
      \end{itemize}
   \end{block}
 #+end_src
+
 *** 许多已发表的肿瘤相关Gene Signature并不严谨
 [[./randomsig.png]]
-**** 可重复性验证很重要
-* 筛选策略及其代表文献
-** 总体思路
-*** Biomarker筛选策略
-#+begin_src latex
-\begin{center}
-  \includegraphics[width=.7\textwidth]{../../LaTeX/BioMarkerScreening.pdf}
-\end{center}
 
+**** 可重复性验证很重要
+
+* 平台总体的设计
+** 模组化平台
+*** 流水线
+#+latex: \centering\includegraphics[width=\textwidth]{../../LaTeX/Pipeline.pdf}
+*** 筛选平台
+#+latex: \centering\includegraphics[width=\textwidth]{../../LaTeX/Platform.pdf}
+* 筛选策略及其代表文献
+
+** 总体思路
+
+*** Gene Signature筛选策略
+#+begin_src latex
+  \begin{overprint}
+    \onslide<1>
+    \begin{center}
+      \includegraphics[width=.7\textwidth]{../../LaTeX/BioMarkerScreening.pdf}
+    \end{center}
+  \end{overprint}
+  
+  
 #+end_src
 ** 结果的验证
 *** Stratified cross validation
@@ -174,14 +196,14 @@
 
 ** Cox拟合
 *** Cox regression
+
 #+begin_src latex
-  
   \begin{overprint}
     \onslide<1>
     \begin{block}{特点}
       \begin{itemize}
-      \item \textbf{适用场合：} 对给定患者给出一个实值评分，适合临床诊断指标比较完善的癌症。
-      \item \textbf{目的：} 可以与现有的诊断指标灵活地结合，自定义评价准则。
+      \item \textbf{适用场合：} 对给定患者给出一个实值评分，并可以评估模型中各因素的重要性，适合临床诊断指标比较完善，研究较为透彻的癌症。
+      \item \textbf{目的：} 评估对现有诊断模型的改进，并与现有的诊断指标灵活地结合，自定义评价准则。
       \end{itemize}
     \end{block}
     
@@ -296,7 +318,3 @@ The overall survival rate at 5 years is 72-77\%.
   \end{itemize}
   
 #+end_src
-* 平台总体的设计
-** 模组化平台
-*** 筛选平台
-#+latex: \centering\includegraphics[width=\textwidth]{../../LaTeX/Platform.pdf}

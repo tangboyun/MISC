@@ -46,7 +46,7 @@ randomVecByFunc len s f = runST $ do
 {-# SPECIALIZE shuffle :: Seed -> UV.Vector Int -> (UV.Vector Int,Seed) #-}
 {-# SPECIALIZE shuffle :: Seed -> V.Vector Int -> (V.Vector Int,Seed) #-}
 {-# SPECIALIZE shuffle :: G.Vector v Int => Seed -> v Int -> (v Int,Seed) #-}
--- | shuffle + unsafeBackpermute  
+{-# SPECIALIZE shuffle :: G.Vector v Double => Seed -> v Double -> (v Double,Seed) #-}  
 shuffle :: G.Vector v a => Seed -> v a -> (v a,Seed)
 shuffle s v =
   runST $ do

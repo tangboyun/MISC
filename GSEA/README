@@ -1,0 +1,2 @@
+A simple tool to draw GSEA plot with confidence interval.
+Use lualatex to compile the generated .tex file.

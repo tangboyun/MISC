@@ -64,7 +64,6 @@
 *** 筛选平台
 #+latex: \centering\includegraphics[width=\textwidth]{../../LaTeX/Platform.pdf}
 * 筛选策略及其代表文献
-
 ** 总体思路
 
 *** Gene Signature筛选策略
@@ -93,7 +92,6 @@
   \end{overprint}
   
 #+end_src
-    
     
 ** 半监督学习
 *** Semi-supervised learning

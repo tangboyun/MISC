@@ -29,7 +29,9 @@ type Sample = V.Vector (UV.Vector FloatType)
 type Label = UV.Vector Int
 
   
-sampleProperty :: Sample -> Label -> (UV.Vector FloatType,UV.Vector FloatType,[(FloatType,FloatType,UV.Vector FloatType)]) 
+sampleProperty :: Sample
+               -> Label
+               -> (UV.Vector FloatType,UV.Vector FloatType,[(FloatType,FloatType,UV.Vector FloatType)]) 
 sampleProperty sample label =
   let ts = sortBy (compare `on` snd) $ UV.toList $ UV.indexed label
       -- idxs for each label
@@ -58,10 +60,10 @@ modifyDis delta dVec =
   if abs d > delta
   then if d > 0
        then d - delta
-       else negate $ abs d - delta
-       else 0) dVec
+       else negate $ 
+            abs d - delta
+  else 0) dVec
 
-predict_impl test ms' =         
        
 predict test (mean,std,ms) regShr regStd theta prior =
   let std' = UV.map (+ regStd) std
@@ -72,7 +74,14 @@ predict test (mean,std,ms) regShr regStd theta prior =
             (modifyDis regShr . (\(_,k,m) th-> 
             UV.zipWith (/) 
             (UV.zipWith (-) m mean) 
-            (UV.map ((* (sqrt $ 1/k - 1/n)) . (* th)) std') 
-            ) $ zip ms $ UV.toList theta    
-      ms' = zip3 ls (UV.toList prior) $ map (\(_,k,d') -> UV.zipWith (+) mean (UV.map ((sqrt $ 1/k - 1/n) *) $ UV.zipWith (*) std' d')) $ zip ns ds'
+            (UV.map ((* (sqrt $ 1/k - 1/n)) . (* th)) std'))) $ 
+            zip ms $ UV.toList theta    
+      ms' = zip3 ls (UV.toList prior) $ 
+            map (\(_,k,d') -> 
+                  UV.zipWith (+) mean 
+                  (UV.map ((sqrt $ 1/k - 1/n) *) $
+                   UV.zipWith (*) std' d')) $ 
+            zip ns ds'
+  in 
       
+predict_impl test ms' =         

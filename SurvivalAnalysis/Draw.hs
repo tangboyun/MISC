@@ -53,3 +53,4 @@ toTexString paras args =
                         survivalCurveTemplate
                      ) $ zip paras args
   in render $ setAttribute "curves" curves texTemplate
+

@@ -64,3 +64,4 @@ shuffle s v =
     s' <- save gen
     v' <- G.unsafeFreeze mv
     return $ (v',s')
+

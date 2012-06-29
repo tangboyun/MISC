@@ -13,6 +13,7 @@
 module GSEATemplate 
        (
          toTexString
+       , toTexString'
        )
        where
 
@@ -35,6 +36,7 @@ texTemplate = newSTMP
    \\\\\begin{document}\n\
    \\\\\begin{tikzpicture}\n\
    \\\\\begin{axis}[\n\
+   \axis lines=center,\n\
    \ymax=$yMax$,\n\
    \ymin=$yMin$,\n\
    \xmax=$xMax$,\n\
@@ -68,6 +70,19 @@ curveTemplate = newSTMP
    \\\\\temp\n\
    \}\n"
 
+
+-- | without ci
+curveTemplate' :: StringTemplate String
+curveTemplate' = newSTMP
+  "\\\\addplot[no marks,green] coordinates{\n\
+   \$esPoints$\n\
+   \};\n\
+   \\\\\fill[left color =red!80,right color=blue!80,middle color=white] (axis cs:0,$barMin$) rectangle (axis cs:$idxMax$,$barMax$);\n\
+   \\\\\foreach \\\\x in {$geneSetIdx$} {\n\
+   \\\\\edef\\\\temp{\\\\noexpand\\\\draw[ultra thin] (axis cs: \\\\x,$barMin$) -- (axis cs: \\\\x,$barMax$);}\n\
+   \\\\\temp\n\
+   \}\n"
+
 toTexString :: String -> UV.Vector Int -> (UV.Vector FloatType,UV.Vector (FloatType,FloatType)) -> String
 toTexString title geneSetIdx (eScore,bounds) = 
   let es = UV.toList $ UV.indexed eScore
@@ -93,6 +108,36 @@ toTexString title geneSetIdx (eScore,bounds) =
                ,("idxMax",show idxMax)
                ,("geneSetIdx",intercalate "," $ map show $ sort $ UV.toList geneSetIdx)
                ] curveTemplate
+  in render $ setManyAttrib
+     [("curves", curves)
+     ,("title", title)
+     ,("yMax", show yMax)
+     ,("yMin", show yMin)
+     ,("xMax", show xMax)
+     ,("idxMax", show idxMax)
+     ] texTemplate
+
+-- | without ci
+toTexString' :: String -> UV.Vector Int -> UV.Vector FloatType -> String
+toTexString' title geneSetIdx eScore = 
+  let es = UV.toList $ UV.indexed eScore
+      barMin = barMax - 0.05 * (yMax-yMin)
+      barMax = yMin - 0.02 * (yMax - yMin)
+      idxMax = UV.length eScore - 1
+      vMin = minimum $ UV.toList $ eScore 
+      vMax = maximum $ UV.toList $ eScore 
+      vABS = vMax - vMin
+      yMax = vMax + 0.1 * vABS
+      yMin = vMin - 0.1 * vABS
+      xMax =  floor $ 1.1 * fromIntegral idxMax
+      curves = render $ 
+               setManyAttrib 
+               [("esPoints",intercalate "\n" $ map show es)
+               ,("barMin",show barMin)
+               ,("barMax",show barMax)                
+               ,("idxMax",show idxMax)
+               ,("geneSetIdx",intercalate "," $ map show $ sort $ UV.toList geneSetIdx)
+               ] curveTemplate'
   in render $ setManyAttrib
      [("curves", curves)
      ,("title", title)

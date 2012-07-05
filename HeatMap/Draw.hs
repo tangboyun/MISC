@@ -16,6 +16,7 @@ module Draw where
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
 import Text.StringTemplate
+import Data.Clustering.Hierarchical
 
 
 drawMatrixWithLabel :: Double -> Double -> String -> String -> String -> V.Vector (UV.Vector Double) -> (V.Vector String,String) -> (V.Vector String,String) -> Double -> Double -> String
@@ -59,7 +60,8 @@ labelTemplate = newAngleSTMP
   \}\n\
   \\\\\foreach \\\\x/\\\\y/\\\\z in {<colTuples;separator=','>}{\n\
   \\\\\draw[] (\\\\x,\\\\y) -- ++(0,<halfLineLen>);\n\
-  \\\\\draw ($(\\\\x,\\\\y) + (0,<halfLineLen>) + (<angle>:0)$) -- ++(<angle>:<lineLen>) node [right,rotate=<angle>,font=\\\\<colNameSize>] {\\\\z};\n\
+  \\\\\draw ($(\\\\x,\\\\y) + (0,<halfLineLen>) + (<angle>:0)$) -- ++(<angle>:<lineLen>) \
+  \node [right,rotate=<angle>,font=\\\\<colNameSize>] {\\\\z};\n\
   \}\n"
 
 

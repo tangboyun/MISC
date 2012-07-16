@@ -62,8 +62,8 @@ tmiCor_impl !expData !labelVec =
       canList =  [ (x,y) | y <- [0..p-1], x <- [0..y-1]]
       corM = concat $ parMap (parBuffer numCapabilities rdeepseq) 
              (map (\(i,j) ->
-                    let r1 = (m1 `V.unsafeIndex` i) <.> (m1 `V.unsafeIndex` j)
-                        r2 = (m2 `V.unsafeIndex` i) <.> (m2 `V.unsafeIndex` j)
+                    let !r1 = atanh $! (m1 `V.unsafeIndex` i) <.> (m1 `V.unsafeIndex` j)
+                        !r2 = atanh $! (m2 `V.unsafeIndex` i) <.> (m2 `V.unsafeIndex` j)
                     in ((i,j),r1 - r2))
              ) $ splitEvery chunkSize canList  
   in UV.fromList $! sortBy (flip compare `on` (abs.snd)) corM

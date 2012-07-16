@@ -13,16 +13,20 @@
 --
 -----------------------------------------------------------------------------
 
-module TMIcor where
+module TMIcor
+       (
+         tmiCor
+       )
+       where
+import           Control.Parallel.Strategies
+import           Data.Function
+import           Data.List
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
-import Statistics.Basic
-import Data.List
-import Data.Function
-import Control.Parallel.Strategies
-import GHC.Conc (numCapabilities)
-import Statistics.Sampling
-import System.Random.MWC
+import           GHC.Conc (numCapabilities)
+import           Statistics.Basic
+import           Statistics.Sampling
+import           System.Random.MWC
 
 type FloatType = Double
 type FDR = FloatType

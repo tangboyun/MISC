@@ -54,10 +54,10 @@ tmiCor_impl :: ExpData
             -> Label   
             -> UV.Vector ((Int,Int),FloatType) -- ^ idx pairs & corr-change
 tmiCor_impl !expData !labelVec =
-  let m1 = V.unsafeBackpermute expData $
-           UV.convert $ UV.findIndices id labelVec
-      m2 = V.unsafeBackpermute expData $
-           UV.convert $ UV.findIndices not labelVec
+  let !m1 = V.unsafeBackpermute expData $!
+            UV.convert $ UV.findIndices id labelVec
+      !m2 = V.unsafeBackpermute expData $!
+            UV.convert $ UV.findIndices not labelVec
       p = UV.length $! m1 `V.unsafeIndex` 0
       canList =  [ (x,y) | y <- [0..p-1], x <- [0..y-1]]
       corM = concat $ parMap (parBuffer numCapabilities rdeepseq) 
@@ -76,21 +76,21 @@ tmiCor :: Seed -- ^ initial random seed
        -> Label   -- ^ binary label
        -> ((UV.Vector ((Int,Int),FloatType),FDR),Seed)
 tmiCor seed nPerm firstK expData labelVec =
-  let m1 = standization $!
-           V.unsafeBackpermute expData $
-           UV.convert $ UV.findIndices id labelVec
-      m2 = standization $!
-           V.unsafeBackpermute expData $
-           UV.convert $ UV.findIndices not labelVec
-      perIdx = V.fromList $
-               map fst $ sortBy (compare `on` snd) $
-               UV.toList $
-               UV.indexed $
-               (UV.findIndices id labelVec) UV.++
-               (UV.findIndices not labelVec)
-      expData' = V.unsafeBackpermute (m1 V.++ m2) perIdx
-      vec = UV.take firstK $ tmiCor_impl expData' labelVec
-      l = snd $ UV.last vec
+  let !m1 = standization $!
+            V.unsafeBackpermute expData $
+            UV.convert $ UV.findIndices id labelVec
+      !m2 = standization $!
+            V.unsafeBackpermute expData $
+            UV.convert $ UV.findIndices not labelVec
+      !perIdx = V.fromList $!
+                map fst $ sortBy (compare `on` snd) $
+                UV.toList $
+                UV.indexed $
+                (UV.findIndices id labelVec) UV.++
+                (UV.findIndices not labelVec)
+      !expData' = V.unsafeBackpermute (m1 V.++ m2) perIdx
+      !vec = UV.take firstK $ tmiCor_impl expData' labelVec
+      !l = snd $ UV.last vec
       (fc,seed') = foldl' (\(acc,s) _ ->
                             let (label',s') = shuffle s labelVec
                                 acc' = acc +
@@ -99,5 +99,5 @@ tmiCor seed nPerm firstK expData labelVec =
                                         tmiCor_impl expData' label')
                             in (acc',s')
                           ) (0,seed) [1..nPerm]
-      fdr = fromIntegral fc / fromIntegral nPerm / fromIntegral firstK
+      !fdr = fromIntegral fc / fromIntegral nPerm / fromIntegral firstK
   in ((vec,fdr),seed')

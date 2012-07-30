@@ -25,11 +25,11 @@ import           Control.Parallel.Strategies
 import           Data.List
 import qualified Data.Vector                 as V
 import qualified Data.Vector.Unboxed         as UV
-import           Sampling
+import           PValueAdj.PAdj
+import           Statistics.Sampling
 import           System.Random.MWC
-import           Types
-import PValueAdj
-import Debug.Trace
+import           SurvivalAnalysis.CoxScore
+type FloatType = Double
 
 data P3 = P {-# UNPACK #-} !FloatType
             {-# UNPACK #-} !FloatType
@@ -101,6 +101,75 @@ ntpWithPermTest !n !seed !idxVec !w !sample =
             else dis2
       !p = (UV.head $! rankAll $ dis `UV.cons` rand_dis) / fromIntegral (UV.length rand_dis + 1) 
   in ((label,p),seed')
+
+
+{-# INLINE ntpWithPermTest' #-}
+ntpWithPermTest' :: Int   -- ^ repeat times for permutatiion test
+                -> Seed  -- ^ initial random seed
+                -> UV.Vector Int -- ^ indices for selected signature
+                -> UV.Vector FloatType -- ^ weight for all genes
+                -> UV.Vector FloatType -- ^ exp data for all genes
+                -> ((Int,FloatType),(FloatType,UV.Vector FloatType),Seed) -- ^ label with nominal p-value , Distance and Random distances
+ntpWithPermTest' !n !seed !idxVec !w !sample =
+  let sample' = UV.unsafeBackpermute sample idxVec -- signature
+      w' = UV.unsafeBackpermute w idxVec           -- sig's cox
+      (!label,!(dis1,dis2)) = ntp w' sample'
+      (!rnd_idx,!seed') = 
+        foldl' 
+        (\(acc,s) _ ->
+          let !(v,s') = shuffle s $ UV.enumFromN 0 $ 
+                        UV.length sample
+              !ls = UV.take (UV.length idxVec) v : acc
+          in (ls,s'))
+        ([],seed) [0..n-1]
+      rand_dis = UV.fromList $ 
+                 parMap rdeepseq
+                 (\idxV ->
+                   let !sam = UV.unsafeBackpermute sample idxV -- random genes
+                       !d = if label == 1
+                            then cosDis w' sam  -- Pos sample compare with pos template
+                            else cosDis (UV.map negate w') sam
+                   in d) rnd_idx
+      dis = if label == 1
+            then dis1
+            else dis2
+      !p = (UV.head $! rankAll $ dis `UV.cons` rand_dis) / fromIntegral (UV.length rand_dis + 1) 
+  in ((label,p),(dis,rand_dis),seed')
+
+
+-- | 使用leave-one-out赋予label，同时计算permutation下的p与q-value
+loocvNTPWithPerm :: Int -- ^ permutation times (permutation on signature)
+         -> Seed        
+         -> UV.Vector Int -- ^ indices for selected signature
+         -> V.Vector (UV.Vector FloatType) -- ^ exp data for all genes
+         -> UV.Vector FloatType            -- ^ survival time
+         -> UV.Vector Bool                 -- ^ failure indicator
+         -> ([(Int,FloatType,FloatType)],Seed)
+loocvNTPWithPerm nPerm seed idxVec expData survTime failVec =
+  let nSample = V.length expData
+      result = foldl' (\(acc,s) idx ->
+                        let  expData' = V.unsafeBackpermute expData $
+                                        V.findIndices (/= idx) $ V.enumFromN 0 nSample
+                             w = coxScore expData' survTime failVec
+                             ((l,p),(d,randD),s') = ntpWithPermTest' nPerm s
+                                                    idxVec w (expData `V.unsafeIndex` idx)
+                             acc' = acc ++ [(l,p,d,randD)]
+                        in (acc',s')
+                      ) ([],seed) [0..nSample-1]
+      
+      (ls,ps,ds,randDs) = unzip4 $ fst $ result
+      seed' = snd result
+      randDis = foldr (UV.++) UV.empty randDs
+      dm = median randDis
+      rs = rankAll' $ UV.fromList ds
+      pi = 2 * ( 1 / fromIntegral nSample) * (fromIntegral $ length $ filter (>= dm) ds)
+      vs = map ((/ fromIntegral nSample) . (\d -> fromIntegral $ UV.length $ UV.findIndices (< d) randDis) ds
+      qs_orig = zipWith ((* pi).(\v r -> if r == 0 then v else v/r)) vs rs
+      idxV = map fst $ sortBy (compare `on` snd) $ zip [0..] ps
+      idxV' = UV.fromList $ map fst $ sortBy (compare `on` snd) $ zip [0..] idxV
+      qsOrdered = UV.toList $ UV.unsafeBackpermute (UV.fromList qs_orig) idxV
+      qs = UV.unsafeBackpermute ((head qsOrdered) : reorder (head qsOrdered) (tail qsOrdered)) idxV'
+  in (zip3 ls ps qs,seed')
 
 ntpPredict :: FloatType -- ^ FDR control
            -> Int       -- ^ repeat times for permutation test

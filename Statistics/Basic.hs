@@ -83,7 +83,7 @@ vecFastVarImpl vv =
         GVM.unsafeWrite m_acc i m'
         GVM.unsafeWrite v_acc i s'
         
-    forM_ [0..n-1] $ \i -> do
+    forM_ [0..l-1] $ \i -> do
       v <- v_acc `GVM.unsafeRead` i
       GVM.unsafeWrite v_acc i $ v / fromIntegral (n-1)
     

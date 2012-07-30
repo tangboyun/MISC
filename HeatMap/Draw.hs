@@ -14,13 +14,14 @@
 
 module Draw where
 
-import qualified Data.Vector.Unboxed as UV
-import qualified Data.Vector as V
-import Text.StringTemplate
-import Data.Clustering.Hierarchical
-import Control.Arrow
+import           Control.Arrow
+import           Data.Clustering.Hierarchical
+import           Data.List
 import qualified Data.Map as M
-import Data.List
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
+import           Text.StringTemplate
+
 drawMatrixWithLabel :: Double -> Double -> String -> String -> String
                     -> V.Vector (UV.Vector Double) -> (V.Vector String,String) -> (V.Vector String,String) -> Double -> Double -> String
 drawMatrixWithLabel width height posColor negColor bgColor m (rowNames,rowNameSize) (colNames,colNameSize) lineLen angle =

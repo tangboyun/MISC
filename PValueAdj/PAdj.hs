@@ -232,13 +232,29 @@ permFDR seed n f expData label =
                                           let acc' = acc + e
                                               len' = len + 1
                                           in (acc',len')) (0,0) vs
-                         in v / r
+                         in if r == 0
+                            then v
+                            else v / r
                        ) $ UV.replicate nT (0::FloatType)
       !m = median $ foldr ((UV.++) `on` (UV.map abs)) UV.empty rndTs
       !pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $!
                                           UV.length $!
                                           UV.findIndices ((<= m) . abs) ts)
-  in (UV.map (* pi) fdrs',seed')
+      !qs_orig = UV.map (* pi) fdrs'
+      idxV = map fst $ sortBy (compare `on` (abs . snd)) $ UV.toList $ UV.indexed ts
+      !qsOrdered = UV.toList $ UV.unsafeBackpermute qs_orig (UV.fromList idxV)
+      idxV' = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed (UV.fromList idxV)
+      !qs = UV.unsafeBackpermute (UV.fromList (head qsOrdered : reorder (head qsOrdered) (tail qsOrdered))) idxV'
+  in (qs,seed')
+
+reorder :: Ord a => a -> [a] -> [a]
+reorder _ [] = []
+reorder acc [a] = if a > acc
+                  then [acc]
+                  else [a]
+reorder acc (x:xs) = if x > acc
+                     then acc : reorder acc xs
+                     else x : reorder x xs
 
 permFDR' :: Seed
         -> Int
@@ -275,13 +291,20 @@ permFDR' seed n fp expData label =
                                           let acc' = acc + e
                                               len' = len + 1
                                           in (acc',len')) (0,0) vs
-                         in v / r
+                         in if r == 0
+                            then v
+                            else v / r
                        ) $ UV.replicate nT (0::FloatType)
       !m = median $ foldr (UV.++) UV.empty rndPs
       !pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $
                                           UV.length $
                                           UV.findIndices (>= m) ps)
-  in (UV.map (* pi) fdrs',seed')
+      !qs_orig = UV.map (* pi) fdrs'
+      idxV = map fst $ sortBy (flip compare `on` snd) $ UV.toList $ UV.indexed ps
+      !qsOrdered = UV.toList $ UV.unsafeBackpermute qs_orig (UV.fromList idxV)
+      idxV' = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed (UV.fromList idxV)
+      !qs = UV.unsafeBackpermute (UV.fromList (head qsOrdered : reorder (head qsOrdered) (tail qsOrdered))) idxV'
+  in (qs,seed')
 
 
 comb :: FloatType -> FloatType -> Integer

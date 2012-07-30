@@ -29,7 +29,6 @@ import           Debug.Trace
 import           Statistics.Basic
 import           Statistics.Sampling
 import           Statistics.Distribution
-import           Statistics.Distribution
 import           Statistics.Distribution.ChiSquared
 import           Statistics.Distribution.StudentT
 import           System.Random.MWC
@@ -102,7 +101,7 @@ bonferroni !pVec = UV.map (\e -> if e > 1 then 1 else e) $
                    UV.map (* (fromIntegral $ UV.length pVec)) pVec
 
 
--- | q-value for pFDR
+-- | q-value for pFDR 这个算法需要提供太多初始参数，推荐用permFDR
 -- qValue :: Seed                -- ^ initial random seed
 --        -> UV.Vector FloatType -- ^ range used to find the optimal pi0
 --        -> UV.Vector FloatType -- ^ input p-value
@@ -196,12 +195,13 @@ median vec =
               l1 = l2 - 1
           in 0.5 * (vec' `UV.unsafeIndex` l1 +
                     vec' `UV.unsafeIndex` l2)
-    
+
+-- | 基于permutation的FDR校正
 permFDR :: Seed
         -> Int
         -> (V.Vector (UV.Vector FloatType)
            -> UV.Vector Bool
-           -> UV.Vector FloatType)
+           -> UV.Vector FloatType)    -- ^ func for t-static calc
         -> V.Vector (UV.Vector FloatType)
         -> UV.Vector Bool
         -> (UV.Vector FloatType,Seed)
@@ -213,15 +213,15 @@ permFDR seed n f expData label =
       l = UV.length label
       ls = [0..l-1]
       l1 = UV.length idx1
-      (rndLabels,seed') = if comb (fromIntegral l1) (fromIntegral l) < fromIntegral n -- 是否达到理论上限
-                          then let !rndLs = map (\idxs -> UV.fromList $ map (`elem` idxs) ls) $ combinations l1 ls
-                               in (rndLs,seed)
-                          else foldl'
-                               (\(acc,s) _ ->
+      !(rndLabels,seed') = if comb (fromIntegral l1) (fromIntegral l) < fromIntegral n -- 是否达到理论上限
+                           then let !rndLs = map (\idxs -> UV.fromList $ map (`elem` idxs) ls) $ combinations l1 ls
+                                in (rndLs,seed)
+                           else foldl'
+                                (\(acc,s) _ ->
                                   let !(rndLabel,s') = shuffle s label
                                   in (rndLabel:acc,s')
-                               ) ([],seed) [1..n]
-      !rndTs = parMap rseq (f expData) rndLabels             
+                                ) ([],seed) [1..n]
+      rndTs = parMap rseq (f expData) rndLabels             
       !fdrs' = UV.imap (\i _ ->
                          let t = abs $ ts `UV.unsafeIndex` i
                              r = rs `UV.unsafeIndex` i
@@ -235,11 +235,53 @@ permFDR seed n f expData label =
                          in v / r
                        ) $ UV.replicate nT (0::FloatType)
       !m = median $ foldr ((UV.++) `on` (UV.map abs)) UV.empty rndTs
-      pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $
-                                         UV.length $
-                                         UV.findIndices ((<= m) . abs) ts)
+      !pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $!
+                                          UV.length $!
+                                          UV.findIndices ((<= m) . abs) ts)
   in (UV.map (* pi) fdrs',seed')
 
+permFDR' :: Seed
+        -> Int
+        -> (V.Vector (UV.Vector FloatType)
+           -> UV.Vector Bool
+           -> UV.Vector FloatType)  -- ^ func for p-value calc
+        -> V.Vector (UV.Vector FloatType)
+        -> UV.Vector Bool
+        -> (UV.Vector FloatType,Seed)
+permFDR' seed n fp expData label =
+  let !ps = fp expData label
+      !rs = rankAll' ps
+      nT = UV.length ps
+      idx1 = UV.findIndices id label
+      l = UV.length label
+      ls = [0..l-1]
+      l1 = UV.length idx1
+      (rndLabels,seed') = if comb (fromIntegral l1) (fromIntegral l) < fromIntegral n -- 是否达到理论上限
+                          then let !rndLs = map (\idxs -> UV.fromList $ map (`elem` idxs) ls) $ combinations l1 ls
+                               in (rndLs,seed)
+                          else foldl'
+                               (\(acc,s) _ ->
+                                  let !(rndLabel,s') = shuffle s label
+                                  in (rndLabel:acc,s')
+                               ) ([],seed) [1..n]
+      !rndPs = parMap rseq (fp expData) rndLabels             
+      !fdrs' = UV.imap (\i _ ->
+                         let p = ps `UV.unsafeIndex` i
+                             r = rs `UV.unsafeIndex` i
+                             vs = map (fromIntegral . UV.length .
+                                       UV.findIndices (< p)) rndPs
+                             v = (\(a,leng) ->  a / leng) $!
+                                 foldl' (\(acc,len) e ->
+                                          let acc' = acc + e
+                                              len' = len + 1
+                                          in (acc',len')) (0,0) vs
+                         in v / r
+                       ) $ UV.replicate nT (0::FloatType)
+      !m = median $ foldr (UV.++) UV.empty rndPs
+      !pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $
+                                          UV.length $
+                                          UV.findIndices (>= m) ps)
+  in (UV.map (* pi) fdrs',seed')
 
 
 comb :: FloatType -> FloatType -> Integer

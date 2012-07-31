@@ -19,7 +19,6 @@ module Statistics.Basic
        )
        where
 
-import           Control.Exception
 import           Control.Monad
 import           Control.Monad.ST.Strict
 import qualified Data.Vector                 as V

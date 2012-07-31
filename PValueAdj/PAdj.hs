@@ -19,17 +19,14 @@
 -----------------------------------------------------------------------------
 module PValueAdj where
 
-import           Control.Monad.ST
 import           Control.Parallel.Strategies
 import           Data.Function
 import           Data.List
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
-import           Debug.Trace
 import           Statistics.Basic
 import           Statistics.Sampling
 import           Statistics.Distribution
-import           Statistics.Distribution.ChiSquared
 import           Statistics.Distribution.StudentT
 import           System.Random.MWC
 
@@ -221,7 +218,7 @@ reorder acc (x:xs) = if x > acc
 
 -- | E[V]/R
 calcVR :: [FloatType] -> [FloatType] -> [FloatType]
-calcVR ts' rts' = go (0,0) (head ts') [] ts' rts'
+calcVR ts'' = go (0,0) (head ts'') [] ts'' 
   where
     go _ _ rs [] _ = reverse rs
     go (!accV,!accR) !accT rs (t:ts) [] =
@@ -235,7 +232,7 @@ calcVR ts' rts' = go (0,0) (head ts') [] ts' rts'
                then accV / accR'
                else accV
       in go (accV,accR') accT' (vr:rs) ts []
-    go (!accV,!accR) !accT rs tt@(t:ts) rr@(r:rts) =
+    go (!accV,!accR) !accT rs tt@(t:ts) rr@(r:_) =
       let !len_ = fromIntegral $! length $ takeWhile (> t) rr
           !accV' = accV + len_
           !accR' = if t < accT
@@ -260,7 +257,7 @@ calcVR ts' rts' = go (0,0) (head ts') [] ts' rts'
 
 -- | E[V]/R
 calcVR' :: [FloatType] -> [FloatType] -> [FloatType]
-calcVR' ps' rps' = go (0,0) (head ps') [] ps' rps'
+calcVR' ps'' = go (0,0) (head ps'') [] ps''
   where
     go _ _ rs [] _ = reverse rs
     go (!accV,!accR) !accT rs (p:ps) [] =
@@ -274,7 +271,7 @@ calcVR' ps' rps' = go (0,0) (head ps') [] ps' rps'
                then accV / accR'
                else accV
       in go (accV,accR') accT' (vr:rs) ps []
-    go (!accV,!accR) !accT rs pp@(p:ps) rr@(r:rps) =
+    go (!accV,!accR) !accT rs pp@(p:ps) rr@(r:_) =
       let !len_ = fromIntegral $! length $ takeWhile (< p) rr
           !accV' = accV + len_
           !accR' = if p > accT
@@ -328,14 +325,14 @@ permFDR !seed !n f !expData !label =
                                ) ([],seed) [1..n]
       !nR = min nUpBound (fromIntegral n)
       !rndTs = map (f expData) rndLabels
-      !totalRndTs = UV.fromList $ sortBy (flip compare `on` (id)) $ UV.toList $ UV.map abs $ foldr (UV.++) UV.empty rndTs
+      !totalRndTs = UV.fromList $ sortBy (flip compare `on` id) $ UV.toList $ UV.map abs $ foldr (UV.++) UV.empty rndTs
       vrs = map (* (1 / fromIntegral nR)) $ calcVR (UV.toList ts') (UV.toList totalRndTs)
       !fdrs' = UV.unsafeBackpermute (UV.fromList vrs) (UV.fromList $! map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed idxVec)
       !m = median totalRndTs
-      !pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $!
+      !pi0 = 2 * ( 1 / fromIntegral nT) * (fromIntegral $!
                                           UV.length $!
                                           UV.findIndices ((<= m) . abs) ts)
-      !qs_orig = UV.map (* pi) fdrs'
+      !qs_orig = UV.map (* pi0) fdrs'
       !idxV = map fst $ sortBy (compare `on` (abs . snd)) $ UV.toList $ UV.indexed ts
       qsOrdered = UV.toList $ UV.unsafeBackpermute qs_orig (UV.fromList idxV)
       idxV' = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed (UV.fromList idxV)
@@ -389,11 +386,11 @@ permFDR1 !seed !n f !expData !label =
                             then v
                             else q
                        ) [0.. nT-1]
-      !m = median $! foldr ((UV.++) `on` (UV.map abs)) UV.empty rndTs
-      !pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $!
+      !m = median $! foldr ((UV.++) `on` UV.map abs) UV.empty rndTs
+      !pi0 = 2 * ( 1 / fromIntegral nT) * (fromIntegral $!
                                           UV.length $!
                                           UV.findIndices ((<= m) . abs) ts)
-      !qs_orig = UV.map (* pi) fdrs'
+      !qs_orig = UV.map (* pi0) fdrs'
       !idxV = map fst $ sortBy (compare `on` (abs . snd)) $ UV.toList $ UV.indexed ts
       qsOrdered = UV.toList $ UV.unsafeBackpermute qs_orig (UV.fromList idxV)
       idxV' = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed (UV.fromList idxV)
@@ -434,10 +431,10 @@ permFDR' seed n fp expData label =
       vrs = map (* (1 / fromIntegral nR)) $ calcVR' (UV.toList ps') (UV.toList totalRndPs)
       !fdrs' = UV.unsafeBackpermute (UV.fromList vrs) (UV.fromList $! map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed idxVec)      
       !m = median $ foldr (UV.++) UV.empty rndPs
-      !pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $
-                                          UV.length $
-                                          UV.findIndices (>= m) ps)
-      !qs_orig = UV.map (* pi) fdrs'
+      !pi0 = 2 * ( 1 / fromIntegral nT) * fromIntegral 
+             (UV.length $
+              UV.findIndices (>= m) ps)
+      !qs_orig = UV.map (* pi0) fdrs'
       idxV = map fst $ sortBy (flip compare `on` snd) $ UV.toList $ UV.indexed ps
       !qsOrdered = UV.toList $ UV.unsafeBackpermute qs_orig (UV.fromList idxV)
       idxV' = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed (UV.fromList idxV)
@@ -485,10 +482,10 @@ permFDR1' seed n fp expData label =
                             else v / r
                        ) $ UV.replicate nT (0::FloatType)
       !m = median $ foldr (UV.++) UV.empty rndPs
-      !pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $
-                                          UV.length $
-                                          UV.findIndices (>= m) ps)
-      !qs_orig = UV.map (* pi) fdrs'
+      !pi0 = 2 * ( 1 / fromIntegral nT) * fromIntegral 
+             (UV.length $
+              UV.findIndices (>= m) ps)
+      !qs_orig = UV.map (* pi0) fdrs'
       idxV = map fst $ sortBy (flip compare `on` snd) $ UV.toList $ UV.indexed ps
       !qsOrdered = UV.toList $ UV.unsafeBackpermute qs_orig (UV.fromList idxV)
       idxV' = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed (UV.fromList idxV)

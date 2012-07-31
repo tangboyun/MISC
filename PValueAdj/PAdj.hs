@@ -143,6 +143,18 @@ bonferroni !pVec = UV.map (\e -> if e > 1 then 1 else e) $
 --   in trace (show myPi ++ show pi0s) $ (UV.map ((*myPi).(* fromIntegral m)) $ UV.zipWith (/) pVec v,seed')
 
 
+comb :: FloatType -> FloatType -> Integer
+comb !a !b =
+  let c = b - a
+      num = foldl1' (+) $ map log [1..b]
+      den = foldl1' (+) $ map log $ [1..a] ++ [1..c]
+  in round $ exp $ num - den
+     
+combinations :: Int -> [a] -> [[a]]
+combinations 0 _  = [[]]
+combinations n xs = [ y:ys | y:xs' <- tails xs
+                           , ys <- combinations (n-1) xs']
+
 tstat :: V.Vector (UV.Vector FloatType)
       -> UV.Vector Bool
       -> UV.Vector FloatType
@@ -196,57 +208,7 @@ median vec =
           in 0.5 * (vec' `UV.unsafeIndex` l1 +
                     vec' `UV.unsafeIndex` l2)
 
--- | 基于permutation的FDR校正
-permFDR :: Seed
-        -> Int
-        -> (V.Vector (UV.Vector FloatType)
-           -> UV.Vector Bool
-           -> UV.Vector FloatType)    -- ^ func for t-static calc
-        -> V.Vector (UV.Vector FloatType)
-        -> UV.Vector Bool
-        -> (UV.Vector FloatType,Seed)
-permFDR seed n f expData label =
-  let !ts = f expData label
-      !rs = rankAll' $ UV.map (negate . abs) ts
-      nT = UV.length ts
-      idx1 = UV.findIndices id label
-      l = UV.length label
-      ls = [0..l-1]
-      l1 = UV.length idx1
-      !(rndLabels,seed') = if comb (fromIntegral l1) (fromIntegral l) < fromIntegral n -- 是否达到理论上限
-                           then let !rndLs = map (\idxs -> UV.fromList $ map (`elem` idxs) ls) $ combinations l1 ls
-                                in (rndLs,seed)
-                           else foldl'
-                                (\(acc,s) _ ->
-                                  let !(rndLabel,s') = shuffle s label
-                                  in (rndLabel:acc,s')
-                                ) ([],seed) [1..n]
-      rndTs = parMap rseq (f expData) rndLabels             
-      !fdrs' = UV.imap (\i _ ->
-                         let t = abs $ ts `UV.unsafeIndex` i
-                             r = rs `UV.unsafeIndex` i
-                             vs = map (fromIntegral . UV.length .
-                                       UV.findIndices ((> t) . abs)) rndTs
-                             v = (\(a,leng) ->  a / leng) $!
-                                 foldl' (\(acc,len) e ->
-                                          let acc' = acc + e
-                                              len' = len + 1
-                                          in (acc',len')) (0,0) vs
-                         in if r == 0
-                            then v
-                            else v / r
-                       ) $ UV.replicate nT (0::FloatType)
-      !m = median $ foldr ((UV.++) `on` (UV.map abs)) UV.empty rndTs
-      !pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $!
-                                          UV.length $!
-                                          UV.findIndices ((<= m) . abs) ts)
-      !qs_orig = UV.map (* pi) fdrs'
-      idxV = map fst $ sortBy (compare `on` (abs . snd)) $ UV.toList $ UV.indexed ts
-      !qsOrdered = UV.toList $ UV.unsafeBackpermute qs_orig (UV.fromList idxV)
-      idxV' = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed (UV.fromList idxV)
-      !qs = UV.unsafeBackpermute (UV.fromList (head qsOrdered : reorder (head qsOrdered) (tail qsOrdered))) idxV'
-  in (qs,seed')
-
+-- | keep the order of q-value the sample as p
 reorder :: Ord a => a -> [a] -> [a]
 reorder _ [] = []
 reorder acc [a] = if a > acc
@@ -255,6 +217,190 @@ reorder acc [a] = if a > acc
 reorder acc (x:xs) = if x > acc
                      then acc : reorder acc xs
                      else x : reorder x xs
+             
+
+-- | E[V]/R
+calcVR :: [FloatType] -> [FloatType] -> [FloatType]
+calcVR ts rts = go (0,0) (head ts) [] ts rts
+  where
+    go _ _ rs [] _ = reverse rs
+    go (!accV,!accR) !accT rs (t:ts) [] =
+      let accT' = if t < accT
+                  then t
+                  else accT
+          accR' = if t < accT
+                  then accR + 1
+                  else accR
+          vr = if accR' /= 0
+               then accV / accR'
+               else accV
+      in go (accV,accR') accT' (vr:rs) ts []
+    go (!accV,!accR) !accT rs tt@(t:ts) rr@(r:rts) =
+      let !len_ = fromIntegral $! length $ takeWhile (> t) rr
+          !accV' = accV + len_
+          !accR' = if t < accT
+                   then accR + 1
+                   else accR
+          !accT' = if t < accT
+                   then t
+                   else accT
+          !vr = if accR' /= 0
+                then accV' / accR'
+                else accV'
+          !ts' = dropWhile (== t) tt
+          !rts' = dropWhile (== t) rr
+          !len_t = length $ takeWhile (==t) tt
+          !len_r = length $ takeWhile (==t) rr
+          !vr' = if accR == 0
+                 then accV
+                 else accV/accR -- 避免NaN与Inf等情况
+      in if t == r
+         then go (accV + fromIntegral len_r,accR + fromIntegral len_t) (head ts') (replicate len_t vr' ++ rs) ts' rts'
+         else go (accV',accR') accT' (vr:rs) ts $ dropWhile (> t) rr
+
+-- | E[V]/R
+calcVR' :: [FloatType] -> [FloatType] -> [FloatType]
+calcVR' ps' rps' = go (0,0) (head ps') [] ps' rps'
+  where
+    go _ _ rs [] _ = reverse rs
+    go (!accV,!accR) !accT rs (p:ps) [] =
+      let accT' = if p > accT
+                  then p
+                  else accT
+          accR' = if p > accT
+                  then accR + 1
+                  else accR
+          vr = if accR' /= 0
+               then accV / accR'
+               else accV
+      in go (accV,accR') accT' (vr:rs) ps []
+    go (!accV,!accR) !accT rs pp@(p:ps) rr@(r:rps) =
+      let !len_ = fromIntegral $! length $ takeWhile (< p) rr
+          !accV' = accV + len_
+          !accR' = if p > accT
+                   then accR + 1
+                   else accR
+          !accT' = if p > accT
+                   then p
+                   else accT
+          !vr = if accR' /= 0
+                then accV' / accR'
+                else accV'
+          !ts' = dropWhile (== p) pp
+          !rts' = dropWhile (== p) rr
+          !len_t = length $ takeWhile (==p) pp
+          !len_r = length $ takeWhile (==p) rr
+          !vr' = if accR == 0
+                 then accV
+                 else accV/accR -- 避免NaN与Inf等情况
+      in if p == r
+         then go (accV + fromIntegral len_r,accR + fromIntegral len_t) (head ts') (replicate len_t vr' ++ rs) ts' rts'
+         else go (accV',accR') accT' (vr:rs) ps $ dropWhile (< p) rr
+
+
+-- | 基于permutation的FDR校正，时间O(nm),线性扫描版本,其中n为perm次数，m为基因数，需要内存能装下至少（n+1）m个Double。
+permFDR :: Seed
+        -> Int
+        -> (V.Vector (UV.Vector FloatType)
+           -> UV.Vector Bool
+           -> UV.Vector FloatType)  -- ^ func for t-static calc
+        -> V.Vector (UV.Vector FloatType)
+        -> UV.Vector Bool
+        -> (UV.Vector FloatType,Seed)
+permFDR !seed !n f !expData !label =
+  let !ts = f expData label
+      idxVec = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed $ UV.map (negate . abs) ts
+      !ts' = UV.unsafeBackpermute (UV.map abs ts) idxVec
+      !nT = UV.length ts
+      !idx1 = UV.findIndices id label
+      !l = UV.length label
+      !ls = [0..l-1]
+      !l1 = UV.length idx1
+      !nUpBound = comb (fromIntegral l1) (fromIntegral l)
+      (!rndLabels,!seed') = if nUpBound < fromIntegral n -- 是否达到理论上限
+                          then let !rndLs = map (\idxs -> UV.fromList $! map (`elem` idxs) ls) $ combinations l1 ls
+                               in (rndLs,seed)
+                          else foldl'
+                               (\(acc,s) _ ->
+                                  let (!rndLabel,!s') = shuffle s label
+                                      !acc' = rndLabel:acc
+                                  in (acc',s')
+                               ) ([],seed) [1..n]
+      !nR = min nUpBound (fromIntegral n)
+      !rndTs = map (f expData) rndLabels
+      !totalRndTs = UV.fromList $ sortBy (flip compare `on` (id)) $ UV.toList $ UV.map abs $ foldr (UV.++) UV.empty rndTs
+      vrs = map (* (1 / fromIntegral nR)) $ calcVR (UV.toList ts') (UV.toList totalRndTs)
+      !fdrs' = UV.unsafeBackpermute (UV.fromList vrs) (UV.fromList $! map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed idxVec)
+      !m = median totalRndTs
+      !pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $!
+                                          UV.length $!
+                                          UV.findIndices ((<= m) . abs) ts)
+      !qs_orig = UV.map (* pi) fdrs'
+      !idxV = map fst $ sortBy (compare `on` (abs . snd)) $ UV.toList $ UV.indexed ts
+      qsOrdered = UV.toList $ UV.unsafeBackpermute qs_orig (UV.fromList idxV)
+      idxV' = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed (UV.fromList idxV)
+      qs' = UV.fromList $ head qsOrdered : reorder (head qsOrdered) (tail qsOrdered)
+      !qs = UV.unsafeBackpermute qs' idxV'
+  in (qs,seed')
+
+
+-- | 基于permutation的FDR校正,这个版本较上个函数相比给出相同结果需要 O(n * m^2)时间,思路最为清晰、内存占用约km个double。但很慢。
+permFDR1 :: Seed
+        -> Int
+        -> (V.Vector (UV.Vector FloatType)
+           -> UV.Vector Bool
+           -> UV.Vector FloatType)  -- ^ func for t-static calc
+        -> V.Vector (UV.Vector FloatType)
+        -> UV.Vector Bool
+        -> (UV.Vector FloatType,Seed)
+permFDR1 !seed !n f !expData !label =
+  let !ts = f expData label
+      idxVec = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed $ UV.map (negate . abs) ts
+      !ts' = UV.unsafeBackpermute (UV.map abs ts) idxVec
+
+      !rs = rankAll' ts'
+      !nT = UV.length ts
+      !idx1 = UV.findIndices id label
+      !l = UV.length label
+      !ls = [0..l-1]
+      !l1 = UV.length idx1
+      (!rndLabels,!seed') = if comb (fromIntegral l1) (fromIntegral l) < fromIntegral n -- 是否达到理论上限
+                          then let !rndLs = map (\idxs -> UV.fromList $! map (`elem` idxs) ls) $ combinations l1 ls
+                               in (rndLs,seed)
+                          else foldl'
+                               (\(acc,s) _ ->
+                                  let (!rndLabel,!s') = shuffle s label
+                                      !acc' = rndLabel:acc
+                                  in (acc',s')
+                               ) ([],seed) [1..n]
+      !rndTs = map (f expData) rndLabels
+      !fdrs' = UV.fromList $! parMap rdeepseq (\i ->
+                         let !t = abs $! ts `UV.unsafeIndex` i
+                             !r = rs `UV.unsafeIndex` i
+                             !vs = map (fromIntegral . UV.length .
+                                       UV.findIndices ((> t) . abs)) rndTs
+                             !v = (\(a,leng) ->  a / leng) $!
+                                  foldl' (\(acc,len) e ->
+                                           let !acc' = acc + e
+                                               !len' = len + 1
+                                           in (acc',len')) (0,0) vs
+                             !q = v / r
+                         in if r==0
+                            then v
+                            else q
+                       ) [0.. nT-1]
+      !m = median $! foldr ((UV.++) `on` (UV.map abs)) UV.empty rndTs
+      !pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $!
+                                          UV.length $!
+                                          UV.findIndices ((<= m) . abs) ts)
+      !qs_orig = UV.map (* pi) fdrs'
+      !idxV = map fst $ sortBy (compare `on` (abs . snd)) $ UV.toList $ UV.indexed ts
+      qsOrdered = UV.toList $ UV.unsafeBackpermute qs_orig (UV.fromList idxV)
+      idxV' = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed (UV.fromList idxV)
+      qs' = UV.fromList $ head qsOrdered : reorder (head qsOrdered) (tail qsOrdered)
+      !qs = UV.unsafeBackpermute qs' idxV'
+  in (qs,seed')
+
 
 permFDR' :: Seed
         -> Int
@@ -265,6 +411,49 @@ permFDR' :: Seed
         -> UV.Vector Bool
         -> (UV.Vector FloatType,Seed)
 permFDR' seed n fp expData label =
+  let !ps = fp expData label
+      idxVec = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed ps
+      ps' = UV.unsafeBackpermute ps idxVec
+      nT = UV.length ps
+      idx1 = UV.findIndices id label
+      l = UV.length label
+      ls = [0..l-1]
+      l1 = UV.length idx1
+      !nUpBound = comb (fromIntegral l1) (fromIntegral l)      
+      !nR = min nUpBound (fromIntegral n)      
+      (rndLabels,seed') = if nUpBound < fromIntegral n -- 是否达到理论上限
+                          then let !rndLs = map (\idxs -> UV.fromList $ map (`elem` idxs) ls) $ combinations l1 ls
+                               in (rndLs,seed)
+                          else foldl'
+                               (\(acc,s) _ ->
+                                  let !(rndLabel,s') = shuffle s label
+                                  in (rndLabel:acc,s')
+                               ) ([],seed) [1..n]
+      !rndPs = map (fp expData) rndLabels
+      !totalRndPs = UV.fromList $ sort $ UV.toList $ foldr (UV.++) UV.empty rndPs
+      vrs = map (* (1 / fromIntegral nR)) $ calcVR' (UV.toList ps') (UV.toList totalRndPs)
+      !fdrs' = UV.unsafeBackpermute (UV.fromList vrs) (UV.fromList $! map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed idxVec)      
+      !m = median $ foldr (UV.++) UV.empty rndPs
+      !pi = 2 * ( 1 / fromIntegral nT) * (fromIntegral $
+                                          UV.length $
+                                          UV.findIndices (>= m) ps)
+      !qs_orig = UV.map (* pi) fdrs'
+      idxV = map fst $ sortBy (flip compare `on` snd) $ UV.toList $ UV.indexed ps
+      !qsOrdered = UV.toList $ UV.unsafeBackpermute qs_orig (UV.fromList idxV)
+      idxV' = UV.fromList $ map fst $ sortBy (compare `on` snd) $ UV.toList $ UV.indexed (UV.fromList idxV)
+      !qs = UV.unsafeBackpermute (UV.fromList (head qsOrdered : reorder (head qsOrdered) (tail qsOrdered))) idxV'
+  in (qs,seed')
+
+
+permFDR1' :: Seed
+        -> Int
+        -> (V.Vector (UV.Vector FloatType)
+           -> UV.Vector Bool
+           -> UV.Vector FloatType)  -- ^ func for p-value calc
+        -> V.Vector (UV.Vector FloatType)
+        -> UV.Vector Bool
+        -> (UV.Vector FloatType,Seed)
+permFDR1' seed n fp expData label =
   let !ps = fp expData label
       !rs = rankAll' ps
       nT = UV.length ps
@@ -291,7 +480,7 @@ permFDR' seed n fp expData label =
                                           let acc' = acc + e
                                               len' = len + 1
                                           in (acc',len')) (0,0) vs
-                         in if r == 0
+                         in if r==0
                             then v
                             else v / r
                        ) $ UV.replicate nT (0::FloatType)
@@ -307,14 +496,4 @@ permFDR' seed n fp expData label =
   in (qs,seed')
 
 
-comb :: FloatType -> FloatType -> Integer
-comb !a !b =
-  let c = b - a
-      num = foldl1' (+) $ map log [1..b]
-      den = foldl1' (+) $ map log $ [1..a] ++ [1..c]
-  in round $ exp $ num - den
-     
-combinations :: Int -> [a] -> [[a]]
-combinations 0 _  = [[]]
-combinations n xs = [ y:ys | y:xs' <- tails xs
-                           , ys <- combinations (n-1) xs']
+

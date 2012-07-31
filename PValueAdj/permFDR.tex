@@ -1,0 +1,51 @@
+%%% permFDR.tex --- 
+%% Version: $Id: permFDR.tex,v 0.0 2012/07/30 06:32:55 tangboyun Exp$
+%% Copyright : (c) 2012 Boyun Tang
+%% License : BSD-style
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{times}
+\renewcommand{\vec}[1]{\mbox{\boldmath$#1$}}
+\DeclareMathAlphabet{\mathsfsl}{OT1}{cmss}{m}{sl}
+\newcommand{\tensor}[1]{\mathsfsl{#1}}
+
+\begin{document}
+
+%\section{permutation plug-in method for FDR calculation}
+%\label{sec-fdr}
+\begin{algorithm}[H]
+\caption{Permutation Plug-in Method}
+\label{perm-plug-in}
+\algsetup{indent=2em}
+\algsetup{linenodelimiter=\ }
+\begin{algorithmic}[1]
+\REQUIRE Expression dataset $\tensor{X}$ ($n$ samples with $p$ genes for each sample), a $k$-gene signature $S$, the weight $\vec{w}$ for each gene.
+\STATE Compute the distance statistics $d_1,\ldots,d_n$ based on the signature $S$ using neareast template prediction (NTP) algorithm.
+\STATE Randomly pick up $k$ gene $B$ times. In the $b$th permutation, compute statistics $d_1^b,\ldots,d_n^b$ based on the permuted signature.
+      
+\STATE For a range of values of the cutpoint $C$, compute $\hat{V} = \frac{1}{B}\sum_{j=1}^n\sum_{b=1}^BI_{(|d_j^b| >C)}$, and $\hat{R} = \sum_{j=1}^nI_{(|d_j|>C)}$
+\STATE Estimate the FDR at the cutpoint $C$ by $\hat{FDR_C}=\hat{\pi_0}\frac{\hat{V}}{\hat{R}}$, where $\hat{\pi_0}=\frac{2}{n}\sum_{j=1}^nI_{(|d_j|\ge q)}$ and $q$ the median of all permuted values $|d_j^b|$, $j = 1,\ldots,n$,$b=1,\ldots,B$.
+\end{algorithmic}
+\end{algorithm}
+
+
+% \begin{algorithm}[H]
+%   \caption{Nearest Template Prediction}\label{ntp}
+%   \algsetup{indent=2em}
+%   \algsetup{linenodelimiter=\ }
+
+%   \begin{algorithmic}[1]
+%     \REQUIRE
+%     \STATE
+%   \end{algorithmic}
+
+% \end{algorithm}
+
+  
+\end{document}
+
+
+%%% Local Variables: 
+%%% TeX-master: t
+%%% End: 

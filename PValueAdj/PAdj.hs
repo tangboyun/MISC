@@ -221,7 +221,7 @@ reorder acc (x:xs) = if x > acc
 
 -- | E[V]/R
 calcVR :: [FloatType] -> [FloatType] -> [FloatType]
-calcVR ts rts = go (0,0) (head ts) [] ts rts
+calcVR ts' rts' = go (0,0) (head ts') [] ts' rts'
   where
     go _ _ rs [] _ = reverse rs
     go (!accV,!accR) !accT rs (t:ts) [] =

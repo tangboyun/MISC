@@ -22,11 +22,6 @@ import Data.Function
 import Data.List
 type FloatType = Double
 
-testMatrix :: Matrix Double
-testMatrix = fromLists [[1,2,3],[4,5,6],[7,8,9]]
-
-testMatrix2 :: Matrix Double
-testMatrix2 = fromLists [[1,2,3,4],[4,5,6,7],[7,8,9,10]]
 
 
 -- | each elem - col mean

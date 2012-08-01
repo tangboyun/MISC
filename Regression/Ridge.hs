@@ -9,8 +9,8 @@
 -- Portability : ghc
 -- Reference : Efficient Quadratic Regularization for Expression Arrays
 --             Trevor Hastie,Robert Tibshirani
-
--- 
+--             与R的MASS包中的lm.ridge计算结果会有少许差异,R包中使用X_stand=X/(mean((X-mean(X))^2))^0.5
+--             这里用的是标准的方差求法。
 --
 -----------------------------------------------------------------------------
 

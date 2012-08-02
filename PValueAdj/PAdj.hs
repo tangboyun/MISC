@@ -243,7 +243,7 @@ calcVR ts'' = go (0,0) (head ts'') [] ts''
                    else accT
           !vr = if accR' /= 0
                 then accV' / accR'
-                else accV'
+                else 0
           !ts' = dropWhile (== t) tt
           !rts' = dropWhile (== t) rr
           !len_t = length $ takeWhile (==t) tt
@@ -288,7 +288,7 @@ calcVR' ps'' = go (0,0) (head ps'') [] ps''
           !len_t = length $ takeWhile (==p) pp
           !len_r = length $ takeWhile (==p) rr
           !vr' = if accR == 0
-                 then accV
+                 then 0
                  else accV/accR -- 避免NaN与Inf等情况
       in if p == r
          then go (accV + fromIntegral len_r,accR + fromIntegral len_t) (head ts') (replicate len_t vr' ++ rs) ts' rts'
@@ -383,7 +383,7 @@ permFDR1 !seed !n f !expData !label =
                                            in (acc',len')) (0,0) vs
                              !q = v / r
                          in if r==0
-                            then v
+                            then 0
                             else q
                        ) [0.. nT-1]
       !m = median $! foldr ((UV.++) `on` UV.map abs) UV.empty rndTs
@@ -478,7 +478,7 @@ permFDR1' seed n fp expData label =
                                               len' = len + 1
                                           in (acc',len')) (0,0) vs
                          in if r==0
-                            then v
+                            then 0
                             else v / r
                        ) $ UV.replicate nT (0::FloatType)
       !m = median $ foldr (UV.++) UV.empty rndPs

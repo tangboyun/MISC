@@ -27,6 +27,7 @@ import qualified Data.Vector.Unboxed as UV
 import           Statistics.Basic
 import           Statistics.Sampling
 import           Statistics.Distribution
+import           Statistics.Distribution.Normal
 import           Statistics.Distribution.StudentT
 import           System.Random.MWC
 
@@ -493,4 +494,8 @@ permFDR1' seed n fp expData label =
   in (qs,seed')
 
 
-
+tToZ :: Int -> FloatType -> FloatType
+tToZ !df !t =
+  let !dis = studentT $ fromIntegral df
+      !dis' = standard -- 标准正态分布
+  in quantile dis' $ cumulative dis t

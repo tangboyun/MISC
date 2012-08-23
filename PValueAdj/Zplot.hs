@@ -7,7 +7,8 @@
 -- Maintainer : tangboyun@hotmail.com
 -- Stability : experimental
 -- Portability : ghc
---
+-- Reference : Microarrays, Empirical Bayes, and the Two-Groups Model
+--             Bradley Efron
 -- 
 --
 -----------------------------------------------------------------------------

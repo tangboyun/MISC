@@ -153,6 +153,21 @@ combinations 0 _  = [[]]
 combinations n xs = [ y:ys | y:xs' <- tails xs
                            , ys <- combinations (n-1) xs']
 
+tToZ :: Int -> FloatType -> FloatType
+tToZ !df !t =
+  let !dis = studentT $ fromIntegral df
+      !dis' = standard -- 标准正态分布 N(0,1)
+  in quantile dis' $ cumulative dis t
+
+
+zstat :: V.Vector (UV.Vector FloatType)
+      -> UV.Vector Bool
+      -> UV.Vector FloatType
+zstat !expData !label =
+  let !df = UV.length label - 2
+  in UV.map (tToZ df) $ tstat expData label
+ 
+
 tstat :: V.Vector (UV.Vector FloatType)
       -> UV.Vector Bool
       -> UV.Vector FloatType
@@ -171,6 +186,19 @@ tstat !expData !label =
              (UV.map (* (fromIntegral $ n1-1)) v1)
              (UV.map (* (fromIntegral $ n2-1)) v2)
   in UV.zipWith (/) num den
+
+
+ttestOneSampleTwoTail :: V.Vector (UV.Vector FloatType)
+      -> UV.Vector FloatType
+      -> UV.Vector FloatType
+ttestOneSampleTwoTail !expData !vec =
+  let !(m1,v1) = vecFastMeanVar expData
+      !n = fromIntegral $! V.length expData
+      !num = UV.zipWith (-) m1 vec
+      !den = UV.map ((/ (sqrt n)) . sqrt) v1
+      !dis = studentT $! n - 1
+  in UV.map (\t -> 2 * cumulative dis (negate $! abs t)) $!
+     UV.zipWith (/) num den
 
 
 ttestTwoTail :: V.Vector (UV.Vector FloatType)
@@ -494,8 +522,3 @@ permFDR1' seed n fp expData label =
   in (qs,seed')
 
 
-tToZ :: Int -> FloatType -> FloatType
-tToZ !df !t =
-  let !dis = studentT $ fromIntegral df
-      !dis' = standard -- 标准正态分布
-  in quantile dis' $ cumulative dis t

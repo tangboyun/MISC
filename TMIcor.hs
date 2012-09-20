@@ -28,7 +28,7 @@ import           Statistics.Basic
 import           Statistics.Sampling
 import           System.Random.MWC
 
-type FloatType = Double
+type FloatType = Float
 type FDR = FloatType
 type Label = UV.Vector Bool
 type ExpData = V.Vector (UV.Vector FloatType)

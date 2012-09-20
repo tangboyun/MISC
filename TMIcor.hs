@@ -31,7 +31,34 @@ import           System.Random.MWC
 type FloatType = Float
 type FDR = FloatType
 type Label = UV.Vector Bool
-type ExpData = V.Vector (UV.Vector FloatType)
+type ExpData = V.Vector (UV.Vector FloatType) -- sample ~ col, gene row
+type GData = V.Vector (UV.Vector FloatType) -- gene ~ row, sample ~ col
+
+data Ix = I {-# UNPACK #-} !Int
+          {-# UNPACK #-} !Int
+          
+data TCor = T {
+   idx :: {-# UNPACK #-} !Ix
+  ,val :: {-# UNPACK #-} !FloatType}
+            
+tCor :: GData -> Label -> Ix -> TCor
+tCor !gd !l !c@(I i j) =
+  let !idxClass1 = UV.findIndices id l
+      !idxClass2 = UV.findIndices not l
+      cor !idxVec = UV.foldl1' (+) $  
+                          UV.zipWith (*)
+                          (gd `V.unsafeIndex` i `UV.unsafeBackpermute` idxVec)
+                          (gd `V.unsafeIndex` j `UV.unsafeBackpermute` idxVec)
+      !cor1 = cor idxClass1
+      !cor2 = cor idxClass2
+  in T c $! atanh cor1 - atanh cor2
+  
+
+idxPairs :: Int -> [Ix]
+idxPairs n = concatMap (\(i,xs) -> drop i xs) $
+             zip [0..] $
+             splitEvery n [ I x y | x <- [0..n-1], y <- [0..n-1]]
+
 
 chunkSize :: Int
 chunkSize = 1000
@@ -47,7 +74,7 @@ standization !m =
 (<.>) !x1 !x2 = UV.foldl (+) 0 $ UV.zipWith (*) x1 x2
 
 splitEvery :: Int -> [a] -> [[a]]
-splitEvery n [] = []
+splitEvery _ [] = []
 splitEvery n xs = take n xs : splitEvery n (drop n xs)
 
 tmiCor_impl :: ExpData 

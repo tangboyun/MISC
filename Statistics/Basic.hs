@@ -57,9 +57,21 @@ vecFastVar :: (Floating a,GV.Vector v a) => V.Vector (v a) -> v a
 vecFastVar = snd . vecFastVarImpl
 {-# INLINE vecFastVar #-}
 
+
 vecFastMeanVar :: (Floating a,GV.Vector v a) => V.Vector (v a) -> (v a,v a)
 vecFastMeanVar = vecFastVarImpl
 {-# INLINE vecFastMeanVar #-}
+
+vecMeanVar :: (Floating a,GV.Vector v a) => V.Vector (v a) -> (v a,v a)
+vecMeanVar vv =
+  let mv = vecMean vv
+      nFeature = GV.length $ vv `V.unsafeIndex` 0
+      nSample = fromIntegral $ V.length vv
+      rss = V.foldl' (\acc v ->
+                       GV.zipWith (+) acc $ GV.map (^^2) $ GV.zipWith (-) v mv
+                       ) (GV.replicate nFeature 0) vv
+      var = GV.map (/ (nSample - 1)) rss
+  in (mv,var)
 
 vecFastVarImpl :: (Floating a,GV.Vector v a) => V.Vector (v a) -> (v a,v a)
 vecFastVarImpl vv = 
@@ -94,3 +106,5 @@ vecFastVarImpl vv =
 {-# SPECIALIZE vecFastVarImpl :: V.Vector (UV.Vector Double) -> (UV.Vector Double,UV.Vector Double) #-}
 {-# SPECIALIZE vecFastVarImpl :: (GV.Vector v Float) => V.Vector (v Float) -> (v Float,v Float) #-}
 {-# SPECIALIZE vecFastVarImpl :: (GV.Vector v Double) => V.Vector (v Double) -> (v Double,v Double) #-}
+
+

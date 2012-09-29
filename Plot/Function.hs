@@ -31,3 +31,4 @@ plotFun c n (x1,x2) f = lineColor c $ stroke $
 pathAlongFun n (x1,x2) f =
   let ps = [x1,(x2 - x1) / fromIntegral n .. x2]
   in fromVertices $ zipWith ($) (repeat p2) $ zip ps $ map f ps
+

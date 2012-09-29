@@ -55,6 +55,12 @@ colMean m =
       p = cols m    
   in cmap (/ fromIntegral n) $ ones 1 p <> m
 
+
+centerByColMean :: Matrix FloatType -> Matrix FloatType
+centerByColMean m = 
+  let n = rows m -- sample
+  in m `sub` ones n 1 <> (scale (1 / fromIntegral n) $ ones 1 n <> m)
+
 -- | Centering points in kernel space
 centering :: KMatrix -> KMatrix
 centering (K m) = 

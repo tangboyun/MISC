@@ -137,7 +137,7 @@ ntpWithPermTest' !n !seed !idxVec !w !sample =
   in ((label,p),(dis,rand_dis),seed')
 
 
--- | 使用leave-one-out赋予label，同时计算permutation下的p与q-value
+-- | 使用leave-one-out赋予label，同时计算permutation下的p与q-value, q-value计算参考permFDR
 loocvNTPWithPerm :: Int -- ^ permutation times (permutation on signature)
          -> Seed        
          -> UV.Vector Int -- ^ indices for selected signature

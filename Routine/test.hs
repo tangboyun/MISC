@@ -24,7 +24,7 @@ spair = ("1C","1B")
 main :: IO ()
 main = do
   str <- B8.readFile "mRNAall.txt"
-  let ((s1,_),(s2,_)) = sampleSheet (C 2 Nothing) (parseTSV str) spair
+  let ((s1,_),(s2,_)) = sampleSheet (C 1.5 Nothing) (parseTSV str) spair
   writeFile "test.xls" $ showSpreadsheet $ mkWorkbook [s1,s2] # addStyle (Name "upTitle") upTitle
                                                               # addStyle (Name "dnTitle") dnTitle
                                                               # addStyle (Name "boldCell") boldCell

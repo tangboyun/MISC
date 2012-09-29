@@ -29,14 +29,15 @@ data CutOff = C
               !(Maybe Double) -- p
 
 defaultS = emptyStyle { fontName = Just "Times New Roman"
-                      , fontSize = Just 10 }
-boldCell = emptyStyle { fontIsBold = Just True }
+                      , fontSize = Just 10
+                      }
+boldCell = defaultS { fontIsBold = Just True }
 title = boldCell { hAlign = Just "Center" }
 upTitle = title { bgColor = Just red }
 dnTitle = title { bgColor = Just green }
-noteCellStyle = emptyStyle { hAlign = Just "Center"
-                           , vAlign = Just "Left"
-                           , bgColor = Just khaki }
+noteCellStyle = defaultS { bgColor = Just khaki
+                         , vAlign = Just "Center"
+                         }
 frCellStyle = title { bgColor = Just orange }
 riCellStyle = title { bgColor = Just cornflowerblue }
 niCellStyle = title { bgColor = Just lightgreen}
@@ -44,7 +45,11 @@ annoCellStyle = title { bgColor = Just lightpink }
 
 parseTSV :: ByteString -> (V.Vector ByteString,[V.Vector ByteString])
 parseTSV =
-  (\ls -> (V.fromList $ head ls,map V.fromList $ tail ls)) .
+  (\ls ->
+    let i = fromJust $ V.findIndex (== "Number Passed") h
+        h =  V.fromList $ head ls
+        f = V.ifilter (\idx _ -> idx /= i)
+    in (f h,map (f . V.fromList) $ tail ls)) .
   map (B8.split '\t') .
   filter ((/= '#') .  B8.head) . B8.lines
 
@@ -159,16 +164,22 @@ sampleSheet (C f _) (header,vecs) (s1,s2) =
                                                   ,("reg",regStr)] tabHeaderTemplate
                                    ]
                            line2 = mkRow
-                                   [emptyCell # mergeAcross (fromIntegral $ length begPart - 1)
+                                   [emptyCell 
                                    ,string "Fold Change and Regulation" # mergeAcross 3 # withStyleID "frCell"
                                    ,string "Raw Intensities" # mergeAcross 1 # withStyleID "riCell"
                                    ,string "Normalized Intensities" # mergeAcross 1 # withStyleID "niCell"
                                    ,string "Annotations" # mergeAcross (fromIntegral $ length endPart - 1) # withStyleID "annoCell"
                                    ]
-      
                            line3 = mkRow $
                                    map (withStyleID "boldCell" . string . B8.unpack) titleLs
-                       in [note,emptyRow,emptyRow,line1,line2,line3]
+                           idxLen = fromIntegral $ (length $ filter (== '\n') sampleStr) + 5                                   
+                       in ([note
+                           ,emptyRow # begAtIdx (idxLen + 2)
+                           ,emptyRow # begAtIdx (idxLen + 3)
+                           ,line1 # begAtIdx (idxLen + 4)
+                           ,line2 # begAtIdx (idxLen + 5)
+                           ,line3 # begAtIdx (idxLen + 6)]
+                          , idxLen + 7) 
       ((upRows,upGs),(dnRows,dnGs)) =
           uncurry
           (\a b ->
@@ -176,10 +187,12 @@ sampleSheet (C f _) (header,vecs) (s1,s2) =
             ,unzip $ map (mkRowIdx False . snd) b)) $
           partition ((> 0) . fst) $
           filter ((>= f) . abs . fst) $ map (fc norIdxS1 norIdxS2) vecs
-      upSheet = mkWorksheet (Name $ B8.unpack s1 ++ " vs " ++ B8.unpack s2 ++ "_up") $
-                mkTable $ tabHeader True ++ upRows
-      dnSheet = mkWorksheet (Name $ B8.unpack s1 ++ " vs " ++ B8.unpack s2 ++ "_down") $
-                mkTable $ tabHeader False ++ dnRows
+      upSheet = let (hs,begIdx) = tabHeader True
+                in mkWorksheet (Name $ B8.unpack s1 ++ " vs " ++ B8.unpack s2 ++ "_up") $
+                   mkTable $ hs ++ zipWith (\idx row -> row # begAtIdx idx) [begIdx..] upRows
+      dnSheet = let (hs,begIdx) = tabHeader False
+                in mkWorksheet (Name $ B8.unpack s1 ++ " vs " ++ B8.unpack s2 ++ "_down") $
+                   mkTable $ hs ++ zipWith (\idx row -> row # begAtIdx idx) [begIdx..] dnRows
   in ((upSheet,upGs),(dnSheet,dnGs))
   
 groupSheet :: CutOff -> (V.Vector ByteString,[V.Vector ByteString]) -> (ByteString,ByteString) -> Worksheet

@@ -11,33 +11,23 @@
 -- 
 --
 -----------------------------------------------------------------------------
+
 module DiffExp where
 
 import           Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B8
+import           Data.Char
+import           Data.Colour.Names
 import           Data.Function
-import Data.Maybe
-import Data.Char
-import Data.List (partition,intercalate)
+import           Data.List (partition,findIndex)
+import           Data.Maybe
 import qualified Data.Vector as V
+import           Template
+import           Text.Printf
 import           Text.StringTemplate
 import           Text.XML.SpreadsheetML.Builder
 import           Text.XML.SpreadsheetML.Types
-import           Data.Colour.Names
-import Text.Printf
-
-data CutOff = C
-              !Double -- fold change
-              !(Maybe Double) -- p
-              
-data RNA = Coding
-         | NonCoding
-         deriving (Eq)
-                    
-data Species = Human
-             | Rat
-             | Mouse
-             deriving (Eq)
+import           Types
                       
 defaultS = emptyStyle { fontName = Just "Times New Roman"
                       , fontFamily = Just "Roman"
@@ -55,15 +45,18 @@ riCellStyle = title { bgColor = Just cornflowerblue }
 niCellStyle = title { bgColor = Just lightgreen}
 annoCellStyle = title { bgColor = Just lightpink }
 
-parseTSV :: ByteString -> (V.Vector ByteString,[V.Vector ByteString])
-parseTSV =
+parseTSV :: ByteString -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
+parseTSV str (Setting _ rna _) =
   (\ls ->
     let i = fromJust $ V.findIndex (== "Number Passed") h
+        j = fromJust $ V.findIndex (== "GeneSymbol") h
         h =  V.fromList $ head ls
-        f = V.ifilter (\idx _ -> idx /= i)
-    in (f h,map (f . V.fromList) $ tail ls)) .
-  map (B8.split '\t') .
-  filter ((/= '#') .  B8.head) . B8.lines
+        f = case rna of
+              Coding -> V.ifilter (\idx _ -> idx /= i)
+              _      -> V.ifilter (\idx _ -> idx /= i && idx /= j)
+    in (f h,map (f . V.fromList) $ tail ls)) $
+  map (B8.split '\t') $
+  filter ((/= '#') .  B8.head) $ B8.lines str
 
 
 
@@ -89,44 +82,19 @@ extractS = head . B8.split ',' . B8.takeWhile (/= ']') . B8.tail
 
 
 
--- fcFormula, afcFormula, lfcFormula :: String
--- fcFormula = "=SIGN(RC[6]-RC[7])*POWER(2,ABS(RC[6]-RC[7]))"
--- afcFormula = "=POWER(2,ABS(RC[4]-RC[5]))"
--- lfcFormula = "=RC[5]-RC[6]"
 
-
-
-
-ttestTemplate, tfcTemplate :: Stringable a => StringTemplate a
-ttestTemplate = newSTMP
-                "=T.TEST(RC[$rc1Beg$]:RC[$rc1End$],RC[$rc2Beg$]:RC[$rc2End$],2,2)"
-
-tfcTemplate = newSTMP
-              "=SUM(RC[$rc3Beg$]:RC[$rc3End$])/SUM(RC[$rc4Beg$]:RC[$rc4End$])"
-
-fcTemplate = newSTMP
-             "Fold change([$s1$] vs [$s2$])"
-lfcTemplate = newSTMP
-              "Log Fold change([$s1$] vs [$s2$])"
-afcTemplate = newSTMP
-              "Absolute Fold change([$s1$] vs [$s2$])"
-rgTemplate = newSTMP
-             "Regulation([$s1$] vs [$s2$])"
-
-tabHeaderTemplate = newSTMP "$s1$ vs $s2$ $fc$ fold $reg$ regulated genes"
-
-mkDEGList :: CutOff -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> [(ByteString,[ByteString])]
-mkDEGList c x = foldr (\p@(s1,s2) acc ->
-                        let ((_,gs1),(_,gs2)) = sampleSheet c x p
+mkDEGList :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> [(ByteString,[ByteString])]
+mkDEGList c s x = foldr (\p@(s1,s2) acc ->
+                        let ((_,gs1),(_,gs2)) = sampleSheet c s x p
                             str = s1 `B8.append` " vs " `B8.append` s2
                         in  (str `B8.append` "_up", gs1):
                             (str `B8.append` "_down", gs2):acc
                       ) []
   
-mkFCWorkbook :: CutOff -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> Workbook
-mkFCWorkbook c x ps = 
+mkFCWorkbook :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> Workbook
+mkFCWorkbook c s x ps = 
   let ls = foldr (\e acc ->
-                   let ((ws1,_),(ws2,_)) = sampleSheet c x e
+                   let ((ws1,_),(ws2,_)) = sampleSheet c s x e
                    in ws1:ws2:acc
                  ) [] ps
   in mkWorkbook ls # addStyle (Name "upTitle") upTitle
@@ -139,8 +107,9 @@ mkFCWorkbook c x ps =
                    # addStyle (Name "noteCell") noteCellStyle
                    # addStyle (Name "Default") defaultS
 
-sampleSheet :: CutOff -> (V.Vector ByteString,[V.Vector ByteString]) -> (ByteString,ByteString) -> ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
-sampleSheet (C f _) (header,vecs) (s1,s2) =
+sampleSheet :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
+            -> (ByteString,ByteString) -> ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
+sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
   let rawIdxs = V.findIndices ("(raw)" `isSuffixOf`) header
       norIdxs = V.findIndices ("(normalized)" `isSuffixOf`) header
       gsIdx = fromJust $ V.findIndex (== "GeneSymbol") header
@@ -162,15 +131,10 @@ sampleSheet (C f _) (header,vecs) (s1,s2) =
                               f1 = map (string . B8.unpack) . V.toList
                               f2 = map (number . read . B8.unpack) . V.toList
                               f3 = map (toCell . B8.unpack) . V.toList
-                              nor1 = read $ B8.unpack $ vec `at` norIdxS1
-                              nor2 = read $ B8.unpack $ vec `at` norIdxS2
-                              fcFormula = signum lfcFormula * afcFormula
-                              lfcFormula = nor1 - nor2
-                              afcFormula = 2 ** abs lfcFormula
                               reg = if isUp then "up" else "down"
                           in (mkRow $ 
                               (f1 $ V.unsafeBackpermute vec headIdx) ++
-                              map number [fcFormula,lfcFormula,afcFormula] ++ [string reg] ++
+                              map formula [fcFormula,lfcFormula,afcFormula] ++ [string reg] ++
                               (f2 $ V.unsafeBackpermute vec $
                                V.fromList [rawIdxS1,rawIdxS2,norIdxS1
                                           ,norIdxS2]) ++
@@ -190,19 +154,34 @@ sampleSheet (C f _) (header,vecs) (s1,s2) =
                            len = length titleLs
                            regStr = if isUp then "up" else "down"
                            titleS = if isUp then "upTitle" else "dnTitle"
+                           attrs  = let commonAttr = [("s1",s1)
+                                                     ,("s2",s2)
+                                                     ,("fc",B8.pack $ printf "%.1f" f) 
+                                                     ,("annBeg", toStr $ length begPart + 8)
+                                                     ,("annEnd", toStr $ len - 1)
+                                                     ,("annos", foldl1 (\a b -> a `B8.append` ", " `B8.append` b) endPart)]
+                                    in case rna of
+                                      Coding    -> commonAttr
+                                      NonCoding ->
+                                        let source = toStr $ fromJust $ findIndex (== "source") titleLs
+                                            relaBeg = toStr $ fromJust $ findIndex (== "relationship") titleLs
+                                            relaEnd = toStr $ len -1
+                                        in commonAttr ++ 
+                                           [("source",source)
+                                           ,("relaBeg",relaBeg)
+                                           ,("relaEnd",relaEnd)]
                            noteCell = string $ B8.unpack $ render $
-                                      setManyAttrib
-                                      [("s1",s1)
-                                      ,("s2",s2)
-                                      ,("fc",B8.pack $ printf "%.1f" f) 
-                                      ,("annBeg", toStr $ length begPart + 8)
-                                      ,("annEnd", toStr $ len - 1)
-                                      ,("annos", foldl1 (\a b -> a `B8.append` ", " `B8.append` b) endPart)]
-                                      sampleTemplate
+                                      setManyAttrib attrs $
+                                      sampleTemplate setting
                            note = mkRow
                                    [noteCell # mergeAcross (fromIntegral $ len - 1)
                                              # mergeDown idxLen
                                              # withStyleID "noteCell" ]
+                           mol = case chip of
+                                  GE -> "genes"
+                                  _  -> case rna of
+                                    Coding -> "mRNAs"
+                                    _      -> "LncRNAs"
                            line1 = mkRow
                                    [withStyleID titleS $
                                     mergeAcross (fromIntegral $ len - 1) $
@@ -210,7 +189,8 @@ sampleSheet (C f _) (header,vecs) (s1,s2) =
                                     setManyAttrib [("fc", B8.pack $ printf "%.1f" f)
                                                   ,("s1",s1)
                                                   ,("s2",s2)
-                                                  ,("reg",regStr)] tabHeaderTemplate
+                                                  ,("reg",regStr)
+                                                  ,("mol",mol)] tabHeaderTemplate
                                    ]
                            line2 = mkRow
                                    [emptyCell 
@@ -221,7 +201,7 @@ sampleSheet (C f _) (header,vecs) (s1,s2) =
                                    ]
                            line3 = mkRow $
                                    map (withStyleID "boldCell" . string . B8.unpack) titleLs
-                           idxLen = fromIntegral $ (length $ filter (== '\n') sampleStr) + 2  -- 首尾各空一行                                 
+                           idxLen = fromIntegral $ (length $ filter (== '\n') $ sampleStr setting) + 2  -- 首尾各空一行                                 
                        in ([note
                            ,emptyRow # begAtIdx (idxLen + 2)
                            ,emptyRow # begAtIdx (idxLen + 3)
@@ -253,69 +233,3 @@ groupSheet (C f p) (header,vecs) (gs1,gs2) =
   in undefined
   
 
-groupTemplate :: Stringable a => StringTemplate a
-groupTemplate =
-  newSTMP "# Fold Change cut-off: $fcCutOff$\n\
-  \# P-value cut-off: $pCutOff$\n\
-  \# Condition pairs:  $gName1$ vs $gName2$\n\
-  \\n\
-  \# Column A: ProbeName, it represents probe name.\n\
-  \# Column B: P-value, the p-values calculated from $pairOrUnpair$ t-test.\n\
-  \# Column C: FC (abs), Absolute Fold change between two groups. \n\
-  \# Column D: Regulation, it depicts which group has greater or lower intensity values wrt other group.\n\
-  \# Column E, F: Raw intensity of each group.\n\
-  \# Column G, H: Normalized intensity of each group (log2 transformed).\n\
-  \# Column $rawBeg$ ~ $rawEnd$: Raw intensity of each sample.\n\
-  \# Column $norBeg$ ~ $norEnd$: Normalized intensity of each sample (log2 transformed).\n\
-  \# Column $annBeg$ ~ $annEnd$: Annotations to each probe, including $annos$."
-
-sampleTemplate :: Stringable a => StringTemplate a
-sampleTemplate = newSTMP sampleStr
-
-relationTemplate :: Stringable a => StringTemplate a
-relationTemplate = newSTMP relationStr
-
-
-sampleStr = "# Fold Change cut-off: $fc$\n\
-            \# Condition pairs:  $s1$ vs $s2$\n\
-            \\n\
-            \# Column A: ProbeName, it represents probe name.\n\
-            \# Column B: Fold change, positive value indicates up-regulation and negative value indicates down-regulation.\n\
-            \# Column C: Log Fold change, log2 value of absolute fold change. \
-            \Positive value indicates up-regulation and negative value indicates down-regulation.\n\
-            \# Column D: Absolute Fold change between two samples. \n\
-            \# Column E: Regulation, it depicts which sample has greater or lower intensity values wrt other sample.\n\
-            \# Column F, G: Raw intensity of each sample.\n\
-            \# Column H, I: Normalized intensity of each sample (log2 transformed).\n\
-            \# Column $annBeg$ ~ $annEnd$: Annotations to each probe, including $annos$."
-
-relationStr = "# Columns $relaBeg$ ~ $relaEnd$: the relationship of LncRNA and its nearby coding gene and the coordinate of the coding gene, \
-              \including relationship, Associated_gene_acc, Associated_gene_name, Associated_gene_strand, \
-              \Associated_gene_start, Associated_gene_end.\n\
-              \\"sense_overlapping\": the LncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
-              \\"intronic\": the LncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
-              \\"natural antisense\": the LncRNA is transcribed from the antisense strand and overlapping with a coding transcript; \n\
-              \\"non-overlapping antisense\": the LncRNA is transcribed from the antisense strand without sharing overlapping exons;\n\
-              \\"bidirectional\": the LncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
-              \\"intergenic\": there are no overlapping or bidirectional coding transcripts nearby the LncRNA."
-
-source s = case s of
-  Human -> insert humanSource
-  Mouse -> insert mouseSource
-  _     -> ""
-  where
-    insert c =
-      "RefSeq_NR: RefSeq validated non-coding RNA;\n\
-      \UCSC_knowngene: UCSC known genes annotated as \"non-coding\", \"near-coding\" and \"antisense\" \
-      \(http://genome.ucsc.edu/cgi-bin/hgTables/);\n\
-      \Ensembl: Ensembl (http://www.ensembl.org/index.html);\n" ++ c ++
-      "RNAdb: RNAdb2.0 (http://research.imb.uq.edu.au/rnadb/);\n\
-      \NRED: NRED (http://jsm-research.imb.uq.edu.au/nred/cgi-bin/ncrnadb.pl);\n\
-      \UCR: \"ultra-conserved region\" among human, mouse and rat (http://users.soe.ucsc.edu/~jill/ultra.html);\n\
-      \lincRNA: lincRNA identified by John Rinn's group (Guttman et al. 2009; Khalil et al. 2009);\n\
-      \misc_lncRNA: other sources."
-    humanSource = "H-invDB: H-invDB (http://www.h-invitational.jp/);\n"
-    mouseSource = "Fantom: Fantom project (http://fantom.gsc.riken.jp/);\n"
-
-mkComment = undefined
-mkHeadLine = undefined

@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns, FlexibleContexts #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : I hate EXCEL!!!!
@@ -24,11 +24,24 @@ import           Data.Maybe
 import qualified Data.Vector as V
 import           Template
 import           Text.Printf
+import           Text.Regex.Posix ((=~),getAllMatches)
 import           Text.StringTemplate
 import           Text.XML.SpreadsheetML.Builder
 import           Text.XML.SpreadsheetML.Types
+import           Text.XML.SpreadsheetML.Util
+import           Text.XML.SpreadsheetML.Writer (toElement)
 import           Types
-                      
+import           Debug.Trace
+import qualified Text.XML.Light.Output as L
+
+match :: String -> String -> [(Int,Int)]
+match str regex = map (\(a,b) -> (a, a+b)) $ getAllMatches $ str =~ regex
+
+
+
+vsRegex = "\\b\\w+ vs \\w+\\b"
+log2Regex = "\\blog2\\b"
+
 defaultS = emptyStyle { fontName = Just "Times New Roman"
                       , fontFamily = Just "Roman"
                       , fontSize = Just 10
@@ -170,13 +183,16 @@ sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
                                            [("source",source)
                                            ,("relaBeg",relaBeg)
                                            ,("relaEnd",relaEnd)]
-                           noteCell = string $ B8.unpack $ render $
-                                      setManyAttrib attrs $
-                                      sampleTemplate setting
-                           note = mkRow
-                                   [noteCell # mergeAcross (fromIntegral $ len - 1)
-                                             # mergeDown idxLen
-                                             # withStyleID "noteCell" ]
+                           noteStr = B8.unpack $ render $
+                                     setManyAttrib attrs $
+                                     sampleTemplate setting
+                           noteCell = string noteStr
+                                      # mergeAcross (fromIntegral $ len - 1)
+                                      # mergeDown idxLen
+                                      # withStyleID "noteCell"
+                                      # addTextPropertyAtRanges (noteStr `match` vsRegex) [Bold, Text $ dfp {color = Just red}] 
+                                      # addTextPropertyAtRanges (noteStr `match` log2Regex) [Bold, Text $ dfp {color= Just blue}] 
+                           note = mkRow [noteCell ]
                            mol = case chip of
                                   GE -> "genes"
                                   _  -> case rna of
@@ -202,12 +218,13 @@ sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
                            line3 = mkRow $
                                    map (withStyleID "boldCell" . string . B8.unpack) titleLs
                            idxLen = fromIntegral $ (length $ filter (== '\n') $ sampleStr setting) + 2  -- 首尾各空一行                                 
-                       in ([note
-                           ,emptyRow # begAtIdx (idxLen + 2)
-                           ,emptyRow # begAtIdx (idxLen + 3)
-                           ,line1 # begAtIdx (idxLen + 4)
-                           ,line2 # begAtIdx (idxLen + 5)
-                           ,line3 # begAtIdx (idxLen + 6)]
+                       in trace (L.showElement $ toElement noteCell)
+                          ([note
+                          ,emptyRow # begAtIdx (idxLen + 2)
+                          ,emptyRow # begAtIdx (idxLen + 3)
+                          ,line1 # begAtIdx (idxLen + 4)
+                          ,line2 # begAtIdx (idxLen + 5)
+                          ,line3 # begAtIdx (idxLen + 6)]
                           , idxLen + 7) 
       ((upRows,upGs),(dnRows,dnGs)) =
           uncurry

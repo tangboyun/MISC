@@ -22,6 +22,7 @@ import qualified Data.ByteString.Lazy.Char8 as B8
 import System.FilePath
 import System.Directory
 import Control.Monad
+import Types
 
 mkdir fp = doesDirectoryExist fp >>=
            flip unless (createDirectory fp) 
@@ -53,18 +54,16 @@ ps = [("1C", "1B")
   
 main :: IO ()
 main = do
-  mkdir "result" 
-  mkdir "GoGene" 
-  mkdir "PathGene"
   inPut:outPut:_ <- getArgs
   inStr <- B8.readFile inPut
-  writeFile ("result" </> outPut) $ showSpreadsheet $ mkFCWorkbook (C 1.5 Nothing) (parseTSV inStr) ps
-  forM_ (mkDEGList (C 1.5 Nothing) (parseTSV inStr) ps) $ \(str,gs) -> do
-    let gs' = filter (not . B8.null) gs
-    B8.writeFile ("GoGene" </> B8.unpack str <.> "txt") $ B8.unlines gs'
-    B8.appendFile ("result" </> "note.txt") $ str `B8.append` "\t" `B8.append` (B8.pack $ show $ length gs) `B8.append` "\n"
-    if ("_up" `isSuffixOf` str) 
-      then 
-        B8.writeFile ("PathGene" </> B8.unpack str <.> "txt") $ B8.unlines $ map (`B8.append` "\torange") gs'
-      else 
-        B8.writeFile ("PathGene" </> B8.unpack str <.> "txt") $ B8.unlines $ map (`B8.append` "\tyellow") gs'
+  let setting = Setting GE Coding Rat
+  writeFile outPut $ showSpreadsheet $ mkFCWorkbook (C 1.5 Nothing) setting (parseTSV inStr setting) $ take 1 ps
+  -- forM_ (mkDEGList (C 1.5 Nothing) (Setting NonCoding Rat) (parseTSV inStr) ps) $ \(str,gs) -> do
+  --   let gs' = filter (not . B8.null) gs
+  --   B8.writeFile ("GoGene" </> B8.unpack str <.> "txt") $ B8.unlines gs'
+  --   B8.appendFile ("result" </> "note.txt") $ str `B8.append` "\t" `B8.append` (B8.pack $ show $ length gs) `B8.append` "\n"
+  --   if ("_up" `isSuffixOf` str) 
+  --     then 
+  --       B8.writeFile ("PathGene" </> B8.unpack str <.> "txt") $ B8.unlines $ map (`B8.append` "\torange") gs'
+  --     else 
+  --       B8.writeFile ("PathGene" </> B8.unpack str <.> "txt") $ B8.unlines $ map (`B8.append` "\tyellow") gs'

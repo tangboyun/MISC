@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings, FlexibleContexts #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : I hate EXCEL!!!!
@@ -18,83 +18,19 @@ import           Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B8
 import           Data.Char
 import           Data.Colour.Names
-import           Data.Function
-import           Data.List (partition,findIndex)
+import           Data.List (partition,findIndex,elemIndex)
 import           Data.Maybe
 import qualified Data.Vector as V
+import           Styles
 import           Template
 import           Text.Printf
-import           Text.Regex.Posix ((=~),getAllMatches)
 import           Text.StringTemplate
 import           Text.XML.SpreadsheetML.Builder
 import           Text.XML.SpreadsheetML.Types
 import           Text.XML.SpreadsheetML.Util
 import           Text.XML.SpreadsheetML.Writer (toElement)
 import           Types
-import           Debug.Trace
-import qualified Text.XML.Light.Output as L
-
-match :: String -> String -> [(Int,Int)]
-match str regex = map (\(a,b) -> (a, a+b)) $ getAllMatches $ str =~ regex
-
-
-
-vsRegex = "\\b\\w+ vs \\w+\\b"
-log2Regex = "\\blog2\\b"
-
-defaultS = emptyStyle { fontName = Just "Times New Roman"
-                      , fontFamily = Just "Roman"
-                      , fontSize = Just 10
-                      }
-boldCell = defaultS { fontIsBold = Just True }
-title = boldCell { hAlign = Just "Center" }
-upTitle = title { bgColor = Just red }
-dnTitle = title { bgColor = Just green }
-noteCellStyle = defaultS { bgColor = Just khaki
-                         , vAlign = Just "Center"
-                         }
-frCellStyle = title { bgColor = Just orange }
-riCellStyle = title { bgColor = Just cornflowerblue }
-niCellStyle = title { bgColor = Just lightgreen}
-annoCellStyle = title { bgColor = Just lightpink }
-
-parseTSV :: ByteString -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
-parseTSV str (Setting _ rna _) =
-  (\ls ->
-    let i = fromJust $ V.findIndex (== "Number Passed") h
-        j = fromJust $ V.findIndex (== "GeneSymbol") h
-        h =  V.fromList $ head ls
-        f = case rna of
-              Coding -> V.ifilter (\idx _ -> idx /= i)
-              _      -> V.ifilter (\idx _ -> idx /= i && idx /= j)
-    in (f h,map (f . V.fromList) $ tail ls)) $
-  map (B8.split '\t') $
-  filter ((/= '#') .  B8.head) $ B8.lines str
-
-
-
-toStr :: Int -> ByteString
-toStr i =
-  let ls = ['A'..'Z']
-      (x,y) = i `divMod` 26
-  in if x > 0
-     then B8.cons' (ls !! (x-1)) $! B8.singleton $! ls !! y
-     else B8.singleton $! ls !! i
-
-isSuffixOf :: ByteString -> ByteString -> Bool
-isSuffixOf = B8.isPrefixOf `on` B8.reverse
-
-findNumPart header = (\ls -> (V.minimum ls, V.maximum ls)) $
-                     V.findIndices (\e ->
-                                     "(raw)" `isSuffixOf` e ||
-                                     "(normalized)" `isSuffixOf` e
-                                   ) header
-
-extractG = B8.tail . head . tail . B8.split ',' . B8.takeWhile (/= ']') . B8.tail
-extractS = head . B8.split ',' . B8.takeWhile (/= ']') . B8.tail
-
-
-
+import           UtilFun
 
 mkDEGList :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> [(ByteString,[ByteString])]
 mkDEGList c s x = foldr (\p@(s1,s2) acc ->
@@ -133,25 +69,22 @@ sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
       norIdxS2 = fromJust $ V.find ((== s2). extractS . (header `at`)) norIdxs
       
       fc i j vec = let v = (read $! B8.unpack $! vec `at` i) - (read $! B8.unpack $! vec `at` j)
-                   in (signum v * (2 ** (abs v)),vec)
+                   in (signum v * (2 ** abs v),vec)
       mkRowIdx isUp vec = let (minI,maxI) = findNumPart header
                               ls = [0..V.length header - 1]
                               headIdx = V.fromList $ take minI ls
                               annoIdx = V.fromList $ drop (maxI + 1) ls
-                              toCell str = if all isDigit str && not (null str)
-                                           then number (read str)
-                                           else string str
                               f1 = map (string . B8.unpack) . V.toList
                               f2 = map (number . read . B8.unpack) . V.toList
                               f3 = map (toCell . B8.unpack) . V.toList
                               reg = if isUp then "up" else "down"
                           in (mkRow $ 
-                              (f1 $ V.unsafeBackpermute vec headIdx) ++
+                              f1 (V.unsafeBackpermute vec headIdx) ++
                               map formula [fcFormula,lfcFormula,afcFormula] ++ [string reg] ++
-                              (f2 $ V.unsafeBackpermute vec $
+                              f2 (V.unsafeBackpermute vec $
                                V.fromList [rawIdxS1,rawIdxS2,norIdxS1
                                           ,norIdxS2]) ++
-                              (f3 $ V.unsafeBackpermute vec annoIdx)
+                              f3 (V.unsafeBackpermute vec annoIdx)
                              ,vec `at` gsIdx)
       tabHeader isUp = let (minI,maxI) = findNumPart header
                            ls = [0..V.length header - 1]
@@ -159,7 +92,7 @@ sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
                                      V.fromList $ take minI ls
                            endPart = V.toList $ V.unsafeBackpermute header $
                                      V.fromList $ drop (maxI + 1) ls
-                           fcStr = map (render . setManyAttrib [("s1",s1),("s2",s2)]) $
+                           fcStr = map (render . setManyAttrib [("s1",s1),("s2",s2)]) 
                                    [fcTemplate,lfcTemplate,afcTemplate,rgTemplate]
                            titleLs = begPart ++ fcStr ++
                                      map (header `at`) [rawIdxS1,rawIdxS2,norIdxS1,norIdxS2] ++
@@ -176,8 +109,8 @@ sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
                                     in case rna of
                                       Coding    -> commonAttr
                                       NonCoding ->
-                                        let source = toStr $ fromJust $ findIndex (== "source") titleLs
-                                            relaBeg = toStr $ fromJust $ findIndex (== "relationship") titleLs
+                                        let source = toStr $ fromJust $ elemIndex "source" titleLs 
+                                            relaBeg = toStr $ fromJust $ elemIndex "relationship" titleLs
                                             relaEnd = toStr $ len -1
                                         in commonAttr ++ 
                                            [("source",source)
@@ -190,8 +123,9 @@ sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
                                       # mergeAcross (fromIntegral $ len - 1)
                                       # mergeDown idxLen
                                       # withStyleID "noteCell"
-                                      # addTextPropertyAtRanges (noteStr `match` vsRegex) [Bold, Text $ dfp {color = Just red}] 
-                                      # addTextPropertyAtRanges (noteStr `match` log2Regex) [Bold, Text $ dfp {color= Just blue}] 
+                                      # addTextPropertyAtRanges (noteStr `match` vsRegex) [Bold, Text $ dfp {color = Just red}]
+                                      # addTextPropertyAtRanges (noteStr `match` cutOffRegex) [Bold, Text $ dfp {color = Just red}] 
+                                      # addTextPropertyAtRanges (noteStr `match` log2Regex) [Bold, Text $ dfp {color= Just dodgerblue}] 
                            note = mkRow [noteCell ]
                            mol = case chip of
                                   GE -> "genes"
@@ -217,8 +151,8 @@ sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
                                    ]
                            line3 = mkRow $
                                    map (withStyleID "boldCell" . string . B8.unpack) titleLs
-                           idxLen = fromIntegral $ (length $ filter (== '\n') $ sampleStr setting) + 2  -- 首尾各空一行                                 
-                       in trace (L.showElement $ toElement noteCell)
+                           idxLen = fromIntegral $ length (filter (== '\n') $ sampleStr setting) + 2  -- 首尾各空一行                                 
+                       in 
                           ([note
                           ,emptyRow # begAtIdx (idxLen + 2)
                           ,emptyRow # begAtIdx (idxLen + 3)

@@ -14,6 +14,13 @@ module Template where
 
 import Text.StringTemplate
 import Types
+import Data.List
+
+vsRegex,log2Regex,cutOffRegex :: String
+vsRegex = "\\b\\w+ vs \\w+\\b"
+log2Regex = "\\b[Ll]og2\\b"
+cutOffRegex = "\\s[0-9]\\.[0-9]{1,2}\\b"
+
 
 fcFormula, afcFormula, lfcFormula :: String
 fcFormula = "=SIGN(RC[6]-RC[7])*POWER(2,ABS(RC[6]-RC[7]))"
@@ -63,7 +70,7 @@ sampleStr :: Setting -> String
 sampleStr (Setting _ rna spec) =
   case rna of
     Coding -> commonStr
-    _      -> commonStr ++ "\n\n" ++ sourceStr ++ source spec ++ relationStr
+    _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr]
   where
     commonStr =
       "# Fold Change cut-off: $fc$\n\
@@ -78,7 +85,8 @@ sampleStr (Setting _ rna spec) =
       \# Column F, G: Raw intensity of each sample.\n\
       \# Column H, I: Normalized intensity of each sample (log2 transformed).\n\
       \# Column $annBeg$ ~ $annEnd$: Annotations to each probe, including $annos$.\n"
-    relationStr = 
+
+relationStr = 
       "# Columns $relaBeg$ ~ $relaEnd$: the relationship of LncRNA and its nearby coding gene and the coordinate of the coding gene, \
       \including relationship, Associated_gene_acc, Associated_gene_name, Associated_gene_strand, \
       \Associated_gene_start, Associated_gene_end.\n\
@@ -88,15 +96,16 @@ sampleStr (Setting _ rna spec) =
       \\"non-overlapping antisense\": the LncRNA is transcribed from the antisense strand without sharing overlapping exons;\n\
       \\"bidirectional\": the LncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
       \\"intergenic\": there are no overlapping or bidirectional coding transcripts nearby the LncRNA."
-    sourceStr = 
-      "Note: \n\
-      \# Column $source$: source, the source of LncRNA is collected from.\n"
+
+sourceStr s = 
+  "Note: \n\
+  \# Column $source$: source, the source of LncRNA is collected from.\n" ++ source s
+  where
     source s = case s of
-      Human -> insert humanSource ++ "\n\n"
-      Mouse -> insert mouseSource ++ "\n\n"
-      _     -> ""
-      where
-        insert c =
+      Human -> insert humanSource 
+      Mouse -> insert mouseSource 
+      _     -> ratSource 
+    insert c =
           "RefSeq_NR: RefSeq validated non-coding RNA;\n\
           \UCSC_knowngene: UCSC known genes annotated as \"non-coding\", \"near-coding\" and \"antisense\" \
           \(http://genome.ucsc.edu/cgi-bin/hgTables/);\n\
@@ -106,6 +115,56 @@ sampleStr (Setting _ rna spec) =
           \UCR: \"ultra-conserved region\" among human, mouse and rat (http://users.soe.ucsc.edu/~jill/ultra.html);\n\
           \lincRNA: lincRNA identified by John Rinn's group (Guttman et al. 2009; Khalil et al. 2009);\n\
           \misc_lncRNA: other sources."
-        humanSource = "H-invDB: H-invDB (http://www.h-invitational.jp/);\n"
-        mouseSource = "Fantom: Fantom project (http://fantom.gsc.riken.jp/);\n"
+    humanSource = "H-invDB: H-invDB (http://www.h-invitational.jp/);\n"
+    mouseSource = "Fantom: Fantom project (http://fantom.gsc.riken.jp/);\n"
+    ratSource = "RefSeq_NR: RefSeq validated non-coding RNA;\n\
+                \RefSeq_XR: RefSeq un-validated non-coding RNA;\n\
+                \mouse_ortholog: rat lncRNAs which are obtained by sequence comparison with mouse LncRNAs;\n\
+                \UCR: \"ultra-conserved region\" among human, mouse and rat (http://users.soe.ucsc.edu/~jill/ultra.html);\n\
+                \misc_lncRNA: other sources.\n"
 
+
+
+
+allTargetTemplate :: Stringable a => Setting -> StringTemplate a
+allTargetTemplate = newSTMP . allTargetStr 
+
+allTargetStr :: Setting -> String
+allTargetStr (Setting chip rna spec) =
+  case rna of
+    Coding -> commonStr
+    _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr]
+  where commonStr =     
+          "All Targets Value ($atHeadStr$)\n\
+          \# Column A: ProbeName, it represents the probe name.\n\
+          \# Column $rawBeg$ ~ $rawEnd$: Raw Intensity of each sample.\n\
+          \# Column $norBeg$ ~ $norEnd$: Log2 value of Normalized Intensity of each sample.\n\
+          \# Column $annBeg$ ~ $annEnd$: Annotations to each probe, including $annos$.\n"
+
+boxPlotStr :: String
+boxPlotStr =
+  "Box Plot\n\n\
+  \    The boxplot is a traditional method for visualizing the distribution of a dataset. \
+  \They are most useful for comparing the distributions of several datasets.\n\n\
+  \    Here, a boxplot view is used to look at,  and compare, the distributions of expression values for \
+  \the samples or conditions in an experiment after normalization.\n\n\
+  \    Press Ctrl and rolling button of your mouse to zoom in.\n"
+
+scatterPlotStr :: String
+scatterPlotStr =
+  "Scatter Plot\n\n\
+  \    The scatterplot is a visualization that is useful for assessing \
+  \the variation (or reproducibility) between chips.\n\n\   
+  \    Press Ctrl and rolling button of your mouse to zoom in.\n"
+
+clustringTemplate :: Stringable a => StringTemplate a
+clustringTemplate = newSTMP
+  "Heat Map and Unsupervised Hierarchical Clustering\n\n\
+  \    Hierarchical clustering is one of the simplest and widely used clustering \
+  \techniques for analysis of gene expression data. Cluster analysis arranges samples into \
+  \groups based on their expression levels, which allows us to hypothesize about the relationships \
+  \among samples. The dendrogram shows the relationships among the expression levels of samples.\n\n\      
+  \    Here, hierarchical clustering was performed based on \"All Targets Value\". \
+  \Your experiment consists of $nSample$ different samples. The result of hierarchical clustering on \
+  \conditions shows distinguishable gene expression profiling among samples.\n\n\
+  \    Press Ctrl and rolling button of your mouse to zoom in.\n"

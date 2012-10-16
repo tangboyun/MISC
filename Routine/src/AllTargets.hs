@@ -39,7 +39,8 @@ allTargetWB set@(Setting c r _) str =
       (hs,rs) = span ((== '#') . B8.head) ss
       atHeadStr = parseATheads $ map B8.unpack hs
       (hraw:rss) = map (V.fromList . B8.split '\t') rs
-      ts = removeUnusedAnno set $ reorganize $ V.map removeDQ hraw : rss 
+      ts = removeUnusedAnno set $ reorganize $
+           V.map removeDQ hraw : rss 
       h = head ts
       j = fromJust $ V.elemIndex "Number Passed" h
       at = V.unsafeIndex

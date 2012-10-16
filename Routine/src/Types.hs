@@ -15,7 +15,7 @@ module Types where
 
 data CutOff = C
               !Double -- fold change
-              !(Maybe Double) -- p
+              !(Maybe (TTest,Double)) -- p
               deriving (Eq)
 
 data Setting = Setting Chip RNA Species
@@ -24,7 +24,9 @@ data Setting = Setting Chip RNA Species
 data RNA = Coding
          | NonCoding
          deriving (Eq)
-
+data TTest = Paired
+           | Unpaired
+           deriving (Eq)
 data Chip = GE
           | Lnc
           deriving (Eq)

@@ -149,29 +149,3 @@ allTargetWB set@(Setting c r _) str =
       NonCoding -> (addS $ mkWorkbook $
                     map (\(n,t) -> mkWorksheet (Name $ n ++ " - LncRNAs") t) tables
                   ,infos)
-  where
-    removeUnusedAnno :: Setting -> [V.Vector ByteString] -> [V.Vector ByteString]
-    removeUnusedAnno _ [] = []
-    removeUnusedAnno (Setting c r _) rs@(h:_) =
-      case c of
-        GE -> rs
-        _ ->
-          case r of
-            NonCoding ->
-              let as = findAnnPart h  
-                  aIdxs = V.unsafeBackpermute as $
-                          V.findIndices (`notElem` lncRemoveList) $
-                          V.unsafeBackpermute h as
-                  lncRemoveList = ["Cytoband"
-                                  ,"Description"
-                                  ,"EnsemblID"
-                                  ,"EntrezGene"
-                                  ,"GO(Avadis)"
-                                  ,"TIGRID"
-                                  ,"UniGene"
-                                  ]
-                  idxVec = V.fromList $ [0..snd (findNumPart h)] ++ V.toList aIdxs
-              in map (flip V.unsafeBackpermute idxVec) rs
-        _ -> rs  
-      
-    

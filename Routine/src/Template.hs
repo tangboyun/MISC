@@ -27,9 +27,25 @@ fcFormula = "=SIGN(RC[6]-RC[7])*POWER(2,ABS(RC[6]-RC[7]))"
 afcFormula = "=POWER(2,ABS(RC[4]-RC[5]))"
 lfcFormula = "=RC[5]-RC[6]"
 
-ttestTemplate, tfcTemplate, fcTemplate, lfcTemplate, afcTemplate, rgTemplate, tabHeaderTemplate :: Stringable a => StringTemplate a
-ttestTemplate = newSTMP
-                "=T.TEST(RC[$rc1Beg$]:RC[$rc1End$],RC[$rc2Beg$]:RC[$rc2End$],2,2)"
+gFCAbsTemplate :: Stringable a => StringTemplate a
+gFCAbsTemplate =
+  newSTMP
+  "=POWER(2,ABS(AVERAGE(RC[$g1Beg$]:RC[$g1End$])-AVERAGE(RC[$g2Beg$]:RC[$g2End$])))"
+
+
+toTTestTemplate :: Stringable a => TTest -> StringTemplate a
+toTTestTemplate tCon = 
+  newSTMP $ 
+  "=T.TEST(RC[$g1Beg$]:RC[$g1End$],RC[$g2Beg$]:RC[$g2End$],2,"++ typeStr ++")"
+  where
+    typeStr = case tCon of
+      Paired -> "1"
+      _      -> "2"
+
+tfcTemplate, fcTemplate, lfcTemplate, afcTemplate, rgTemplate, tabHeaderTemplate, avgTemplate, grawTemplate, gnorTemplate :: Stringable a => StringTemplate a
+avgTemplate =
+  newSTMP
+  "=AVERAGE(RC[$gBeg$]:RC[$gEnd$])"
 
 tfcTemplate = newSTMP
               "=SUM(RC[$rc3Beg$]:RC[$rc3End$])/SUM(RC[$rc4Beg$]:RC[$rc4End$])"
@@ -42,28 +58,40 @@ afcTemplate = newSTMP
               "Absolute Fold change([$s1$] vs [$s2$])"
 rgTemplate = newSTMP
              "Regulation([$s1$] vs [$s2$])"
+grawTemplate = newSTMP
+               "[$g$](raw)"
+gnorTemplate = newSTMP
+               "[$g$](normalized)"
 
 tabHeaderTemplate = newSTMP "$s1$ vs $s2$ $fc$ fold $reg$ regulated $mol$"
 
 
-groupTemplate :: Stringable a => StringTemplate a
-groupTemplate =
-  newSTMP "# Fold Change cut-off: $fcCutOff$\n\
-  \# P-value cut-off: $pCutOff$\n\
-  \# Condition pairs:  $gName1$ vs $gName2$\n\
-  \\n\
-  \# Column A: ProbeName, it represents probe name.\n\
-  \# Column B: P-value, the p-values calculated from $pairOrUnpair$ t-test.\n\
-  \# Column C: FC (abs), Absolute Fold change between two groups. \n\
-  \# Column D: Regulation, it depicts which group has greater or lower intensity values wrt other group.\n\
-  \# Column E, F: Raw intensity of each group.\n\
-  \# Column G, H: Normalized intensity of each group (log2 transformed).\n\
-  \# Column $rawBeg$ ~ $rawEnd$: Raw intensity of each sample.\n\
-  \# Column $norBeg$ ~ $norEnd$: Normalized intensity of each sample (log2 transformed).\n\
-  \# Column $annBeg$ ~ $annEnd$: Annotations to each probe, including $annos$."
+groupTemplate :: Stringable a => Setting -> StringTemplate a
+groupTemplate = newSTMP . groupStr
+
+groupStr :: Setting -> String  
+groupStr (Setting _ rna spec) =
+  case rna of
+    Coding -> commonStr
+    _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr]
+  where
+    commonStr =
+      "# Fold Change cut-off: $fcCutOff$\n\
+      \# P-value cut-off: $pCutOff$\n\
+      \# Condition pairs:  $gName1$ vs $gName2$\n\
+      \\n\
+      \# Column A: ProbeName, it represents probe name.\n\
+      \# Column B: P-value, the p-values calculated from $pairOrUnpair$ t-test.\n\
+      \# Column C: FC (abs), Absolute Fold change between two groups. \n\
+      \# Column D: Regulation, it depicts which group has greater or lower intensity values wrt other group.\n\
+      \# Column E, F: Raw intensity of each group.\n\
+      \# Column G, H: Normalized intensity of each group (log2 transformed).\n\
+      \# Column $rawBeg$ ~ $rawEnd$: Raw intensity of each sample.\n\
+      \# Column $norBeg$ ~ $norEnd$: Normalized intensity of each sample (log2 transformed).\n\
+      \# Column $annBeg$ ~ $annEnd$: Annotations to each probe, including $annos$.\n"
 
 sampleTemplate :: Stringable a => Setting -> StringTemplate a
-sampleTemplate s = newSTMP (sampleStr s)
+sampleTemplate = newSTMP . sampleStr
 
 
 sampleStr :: Setting -> String

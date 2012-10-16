@@ -42,3 +42,5 @@ riCellStyle = title { bgColor = Just cornflowerblue }
 niCellStyle = title { bgColor = Just lightgreen}
 annoCellStyle = title { bgColor = Just lightpink }
 whiteCellStyle = defaultS { bgColor = Just white }
+groupRawCellStyle = title { bgColor = Just darkcyan }
+groupNorCellStyle = title { bgColor = Just darkolivegreen }

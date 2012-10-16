@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -27,7 +27,62 @@ import           Text.Regex.Posix
 import           Text.XML.SpreadsheetML.Builder
 import           Text.XML.SpreadsheetML.Types
 import           Types
+import           Statistics.Sample
+import           Statistics.Distribution
+import           Statistics.Distribution.StudentT
          
+
+ttestUnpaired,ttestPaired :: V.Vector Double -> V.Vector Double -> Double
+
+ttestUnpaired !v1 !v2 | V.length v1 > 1, V.length v2 > 1 =
+  let (m1,var1) = meanVarianceUnb v1
+      (m2,var2) = meanVarianceUnb v2
+      n1 = fromIntegral $! V.length v1
+      n2 = fromIntegral $! V.length v2
+      df = n1 + n2 - 2
+      s_pooled = sqrt $! (var1 * (n1-1) + var2 * (n2-1)) / df
+      s = s_pooled * (sqrt $! 1 / n1 + 1 / n2) 
+      t = (m1 - m2) / s
+      dis = studentT df
+  in 2 * cumulative dis (negate $! abs t)
+                      | otherwise = error "Illformed unpaired t-test."
+                                    
+ttestPaired !v1 !v2 | V.length v1 == V.length v2 =
+  let v = V.zipWith (-) v1 v2
+      n = fromIntegral $ V.length v
+      df = n - 1
+      (m,var) = meanVarianceUnb v
+      t = m / (sqrt var / sqrt n)
+      dis = studentT df
+  in 2 * cumulative dis (negate $! abs t)
+                    | otherwise = error "unequal sample size."
+
+removeUnusedAnno :: Setting -> [V.Vector ByteString] -> [V.Vector ByteString]
+removeUnusedAnno _ [] = []
+removeUnusedAnno (Setting c r _) rs@(h:_) =
+  case c of
+    GE -> rs
+    _ ->
+      case r of
+        NonCoding ->
+          let as = findAnnPart h  
+              aIdxs = V.unsafeBackpermute as $
+                      V.findIndices (`notElem` lncRemoveList) $
+                      V.unsafeBackpermute h as
+              lncRemoveList = ["Cytoband"
+                              ,"Description"
+                              ,"EnsemblID"
+                              ,"EntrezGene"
+                              ,"GO(Avadis)"
+                              ,"TIGRID"
+                              ,"UniGene"
+                              ]
+              idxVec = V.fromList $ [0..snd (findNumPart h)] ++ V.toList aIdxs
+          in map (flip V.unsafeBackpermute idxVec) rs
+        _ -> rs  
+      
+    
+
 
 match :: String -> String -> [(Int,Int)]
 match str regex = map (\(a,b) -> (a, a+b)) $ getAllMatches $ str =~ regex

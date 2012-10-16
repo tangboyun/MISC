@@ -26,4 +26,6 @@ executable Report
                        bytestring, 
                        vector, 
                        regex-posix,
-                       xml
+                       xml,
+                       directory,
+                       filepath

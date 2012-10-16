@@ -19,45 +19,21 @@ import           Text.XML.SpreadsheetML.Writer (showSpreadsheet)
 import           Text.XML.SpreadsheetML.Builder
 import Text.XML.SpreadsheetML.Types
 import qualified Data.ByteString.Lazy.Char8 as B8
-import System.FilePath
-import System.Directory
+-- import System.FilePath
+-- import System.Directory
 import Control.Monad
 import Types
+import AllTargets
+-- mkdir fp = doesDirectoryExist fp >>=
+--            flip unless (createDirectory fp) 
 
-mkdir fp = doesDirectoryExist fp >>=
-           flip unless (createDirectory fp) 
-
-ps = [("1C", "1B")
-     ,("1B", "1A")
-     ,("1C", "1D")
-     ,("1D", "1A")
-     ,("1D", "1B")
-     ,("1C", "1A")
-     ,("2C", "2B")
-     ,("2B", "2A")
-     ,("2C", "2D")
-     ,("2D", "2A")
-     ,("2D", "2B")
-     ,("2C", "2A")
-     ,("3C", "3B")
-     ,("3B", "3A")
-     ,("3C", "3D")
-     ,("3D", "3A")
-     ,("3D", "3B")
-     ,("3C", "3A")
-     ,("4C", "4B")
-     ,("4B", "4A")
-     ,("4C", "4D")
-     ,("4D", "4A")
-     ,("4D", "4B")
-     ,("4C", "4A")]
   
 main :: IO ()
 main = do
   inPut:outPut:_ <- getArgs
   inStr <- B8.readFile inPut
-  let setting = Setting GE Coding Rat
-  writeFile outPut $ showSpreadsheet $ mkFCWorkbook (C 1.5 Nothing) setting (parseTSV inStr setting) $ take 1 ps
+  let setting = Setting GE Coding Mouse
+  writeFile outPut $ showSpreadsheet $ fst $ allTargetWB setting inStr 
   -- forM_ (mkDEGList (C 1.5 Nothing) (Setting NonCoding Rat) (parseTSV inStr) ps) $ \(str,gs) -> do
   --   let gs' = filter (not . B8.null) gs
   --   B8.writeFile ("GoGene" </> B8.unpack str <.> "txt") $ B8.unlines gs'

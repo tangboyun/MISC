@@ -13,21 +13,54 @@
 -----------------------------------------------------------------------------
 module UtilFun where
 
-import Control.Arrow ((&&&))
+import           Control.Arrow ((&&&))
 import           Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B8
-import           Text.Regex.Posix 
-import qualified Data.Vector as V
+import           Data.Char
 import           Data.Function
-import           Types
+import           Data.List hiding (isSuffixOf)
 import           Data.Maybe
+import           Data.Monoid
+import           Data.Ord
+import qualified Data.Vector as V
+import           Text.Regex.Posix
 import           Text.XML.SpreadsheetML.Builder
 import           Text.XML.SpreadsheetML.Types
-import           Data.Char
+import           Types
+         
 
 match :: String -> String -> [(Int,Int)]
 match str regex = map (\(a,b) -> (a, a+b)) $ getAllMatches $ str =~ regex
 
+findNumPart header = (V.minimum &&& V.maximum) $
+                     V.findIndices (\e ->
+                                     "(raw)" `isSuffixOf` e ||
+                                     "(normalized)" `isSuffixOf` e
+                                   ) header
+
+removeDQ str = if B8.head str == '"'
+               then B8.tail $ B8.init str
+               else str
+
+
+findRawPart = V.findIndices ("(raw)" `isSuffixOf`)
+findNorPart = V.findIndices ("(normalized)" `isSuffixOf`)
+findAnnPart vec = V.fromList [(snd $ findNumPart vec) + 1..V.length vec - 1]
+  
+reorganize :: [V.Vector ByteString] -> [V.Vector ByteString]
+reorganize [] = []
+reorganize (h:rs) =
+  let at = V.unsafeIndex
+      (rawBeg,norEnd) = findNumPart h
+      organize vec = sortBy (\a b ->
+                              comparing (extractG . (h `at`)) a b `mappend`
+                              comparing (extractS . (h `at`)) a b
+                            ) $ V.toList vec
+      idxVec = V.fromList $ take (V.length h) $
+               [0..rawBeg-1] ++ organize (findRawPart h) ++
+               organize (findNorPart h) ++ [norEnd + 1..]
+  in map (flip V.unsafeBackpermute idxVec) (h:rs)
+      
 parseATheads :: [String] -> String
 parseATheads = 
      let regex = "[^0-9]*([0-9]+) out of ([0-9]+).*" :: String
@@ -62,11 +95,6 @@ toStr i =
 isSuffixOf :: ByteString -> ByteString -> Bool
 isSuffixOf = B8.isPrefixOf `on` B8.reverse
 
-findNumPart header = (V.minimum &&& V.maximum) $
-                     V.findIndices (\e ->
-                                     "(raw)" `isSuffixOf` e ||
-                                     "(normalized)" `isSuffixOf` e
-                                   ) header
 
 extractG = B8.tail . head . tail . B8.split ',' . B8.takeWhile (/= ']') . B8.tail
 extractS = head . B8.split ',' . B8.takeWhile (/= ']') . B8.tail

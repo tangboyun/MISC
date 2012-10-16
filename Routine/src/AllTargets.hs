@@ -14,36 +14,40 @@
 
 module AllTargets where
 
-import UtilFun
-import Template
-import Styles
+import           Control.Arrow ((&&&))
+import           Data.ByteString.Lazy.Char8 (ByteString)
+import qualified Data.ByteString.Lazy.Char8 as B8
+import           Data.Colour.Names
+import           Data.List hiding (isSuffixOf)
+import           Data.Maybe
 import qualified Data.Vector as V
-import Control.Arrow ((&&&))
+import           Styles
+import           Template
 import           Text.StringTemplate
 import           Text.XML.SpreadsheetML.Builder
 import           Text.XML.SpreadsheetML.Types
 import           Text.XML.SpreadsheetML.Util
 import           Text.XML.SpreadsheetML.Writer (toElement)
-import           Data.ByteString.Lazy.Char8 (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as B8
-import Data.Maybe
-import Types
-import Data.List hiding (isSuffixOf)
+import           Types
+import           UtilFun
+
+
 
 allTargetWB :: Setting -> ByteString -> (Workbook, [ByteString])
-allTargetWB set@(Setting c r s) str =
+allTargetWB set@(Setting c r _) str =
   let ss = B8.lines str
       (hs,rs) = span ((== '#') . B8.head) ss
       atHeadStr = parseATheads $ map B8.unpack hs
-      ts = map (V.fromList . B8.split '\t') rs
+      (hraw:rss) = map (V.fromList . B8.split '\t') rs
+      ts = removeUnusedAnno set $ reorganize $ V.map removeDQ hraw : rss 
       h = head ts
       j = fromJust $ V.elemIndex "Number Passed" h
       at = V.unsafeIndex
       ts' =
         case V.elemIndex "ControlType" h of
-          Nothing -> map (V.ifilter (\idx _ -> idx /= j)) ts
+          Nothing -> map (V.ifilter (\idx _ -> idx /= j)) (h:tail ts)
           Just i -> map (V.ifilter (\idx _ -> idx /= i && idx /= j)) $
-                    header : filter (\e -> e `at` i == "false") (tail ts)
+                    h : filter (\e -> e `at` i == "false") (tail ts)
       header = head ts'
       f suffix vec = V.minimum &&& V.maximum $ V.findIndices
                         (suffix `isSuffixOf`) vec
@@ -51,12 +55,14 @@ allTargetWB set@(Setting c r s) str =
       (norBeg,norEnd) = f "(normalized)" header
       (annBeg,annEnd) = (norEnd + 1, len - 1)
       hrow = map (string . B8.unpack) $ V.toList header
-      rows = map (\vec -> mkRow $ 
-                    [string $ B8.unpack $ vec `at` 0] ++
-                    (map (number . read . B8.unpack) $
-                     V.toList $ V.slice rawBeg (norEnd-rawBeg) vec) ++
-                    (map (toCell . B8.unpack) $
-                     V.toList $ V.slice annBeg (annEnd-annBeg) vec)
+      rows = map (\vec -> 
+                    let cs = 
+                          [string $ B8.unpack $ vec `at` 0] ++
+                          (map (number . read . B8.unpack) $
+                           V.toList $ V.slice rawBeg (norEnd-rawBeg+1) vec) ++
+                          (map (toCell . B8.unpack) $
+                           V.toList $ V.slice annBeg (annEnd-annBeg+1) vec)
+                    in mkRow cs 
                   ) $ tail ts'
       atNoteStr = B8.unpack $ render $
                   setManyAttrib
@@ -66,7 +72,7 @@ allTargetWB set@(Setting c r s) str =
                   ,("norEnd",toStr norEnd)
                   ,("annBeg",toStr annBeg)
                   ,("annEnd",toStr annEnd)
-                  ,("annos", B8.intercalate ", " $ V.toList $ V.drop norEnd header)
+                  ,("annos", B8.intercalate ", " $ V.toList $ V.drop annBeg header)
                   ,("atHeadStr", B8.pack atHeadStr)
                   ] $ allTargetTemplate set
       len = V.length header
@@ -75,13 +81,22 @@ allTargetWB set@(Setting c r s) str =
                    # mergeAcross (fromIntegral $ len - 1)
                    # mergeDown idxLen
                    # withStyleID "allHead"
-                   # addTextPropertyAtRanges [(0, fromJust $ elemIndex '\n' atNoteStr)] [Bold, Text $ dfp {size = Just 14}]
+                   # addTextPropertyAtRanges [(0, fromJust $ elemIndex '\n' atNoteStr)]
+                                             [Bold, Text $ dfp {size = Just 14}]
+                   # addTextPropertyAtRanges (atNoteStr `match` log2Regex)
+                                             [Bold, Text $ dfp {color= Just dodgerblue}]                    
       note = mkRow [atNoteCell]
       line1 = mkRow
               [emptyCell
-              ,string "Raw Intensities" # mergeAcross (fromIntegral $ rawEnd-rawBeg) # withStyleID "riCell"
-              ,string "Normalized Intensities" # mergeAcross (fromIntegral $ norEnd-norBeg) # withStyleID "niCell"
-              ,string "Annotations" # mergeAcross (fromIntegral $ annEnd-annBeg) # withStyleID "annoCell"
+              ,string "Raw Intensities"
+               # mergeAcross (fromIntegral $ rawEnd-rawBeg)
+               # withStyleID "riCell"
+              ,string "Normalized Intensities"
+               # mergeAcross (fromIntegral $ norEnd-norBeg)
+               # withStyleID "niCell"
+              ,string "Annotations"
+               # mergeAcross (fromIntegral $ annEnd-annBeg)
+               # withStyleID "annoCell"
               ]
       line2 = mkRow $
               map (withStyleID "boldCell" . string . B8.unpack) $ V.toList header
@@ -91,15 +106,21 @@ allTargetWB set@(Setting c r s) str =
                      ,line1 # begAtIdx (idxLen + 4)
                      ,line2 # begAtIdx (idxLen + 5)]
                     ,idxLen + 6)
-      table1 = mkTable $ hs1 ++ zipWith (\idx row -> row # begAtIdx idx) [begIdx..] rows
-      table str = mkTable
-                  [mkRow
-                   [string str
-                    # mergeAcross 17 --
-                    # mergeDown (fromIntegral $ length (filter (== '\n') str) + 2)
-                    # withStyleID "allHead"
-                    # addTextPropertyAtRanges [(0, fromJust $ elemIndex '\n' str)] [Bold, Text $ dfp {size = Just 14}]
-                   ]]
+      table1 = mkTable $
+               hs1 ++ zipWith (\idx row -> row # begAtIdx idx) [begIdx..] rows
+      table str = let idx = fromIntegral $ length (filter (== '\n') str) + 8
+                  in
+                   mkTable
+                   (mkRow
+                    [string str
+                     # mergeAcross 17 --
+                     # mergeDown (idx - 2)
+                     # withStyleID "allHead"
+                     # addTextPropertyAtRanges [(0, fromJust $ elemIndex '\n' str)]
+                                               [Bold, Text $ dfp {size = Just 14}]
+                    ] : zipWith (\i r -> r # begAtIdx i)
+                    [idx..] (replicate 100 emptyRow))
+                   # withStyleID "white"
       tables =
         zip ["All Targets Value"
             ,"Box Plot"
@@ -116,11 +137,40 @@ allTargetWB set@(Setting c r s) str =
                    # addStyle (Name "annoCell") annoCellStyle
                    # addStyle (Name "allHead") allHeadStyle
                    # addStyle (Name "Default") defaultS
+                   # addStyle (Name "white") whiteCellStyle
       infos = hs ++ [B8.pack $ "Num of entities:" ++ " " ++ show (length rs - 1)]
   in case c of
     GE -> (addS $ mkWorkbook $ map (\(n,t) -> mkWorksheet (Name n) t) tables,infos)
     _  -> case r of
-      Coding -> (addS $ mkWorkbook $ map (\(n,t) -> mkWorksheet (Name $ n ++ " - mRNAs") t) tables
+      Coding -> (addS $ mkWorkbook $
+                 map (\(n,t) -> mkWorksheet (Name $ n ++ " - mRNAs") t) tables
                ,infos)
-      NonCoding -> (addS $ mkWorkbook $ map (\(n,t) -> mkWorksheet (Name $ n ++ " - LncRNAs") t) tables
+      NonCoding -> (addS $ mkWorkbook $
+                    map (\(n,t) -> mkWorksheet (Name $ n ++ " - LncRNAs") t) tables
                   ,infos)
+  where
+    removeUnusedAnno :: Setting -> [V.Vector ByteString] -> [V.Vector ByteString]
+    removeUnusedAnno _ [] = []
+    removeUnusedAnno (Setting c r _) rs@(h:_) =
+      case c of
+        GE -> rs
+        _ ->
+          case r of
+            NonCoding ->
+              let as = findAnnPart h  
+                  aIdxs = V.unsafeBackpermute as $
+                          V.findIndices (`notElem` lncRemoveList) $
+                          V.unsafeBackpermute h as
+                  lncRemoveList = ["Cytoband"
+                                  ,"Description"
+                                  ,"EnsemblID"
+                                  ,"EntrezGene"
+                                  ,"GO(Avadis)"
+                                  ,"TIGRID"
+                                  ,"UniGene"
+                                  ]
+                  idxVec = V.fromList $ [0..snd (findNumPart h)] ++ V.toList aIdxs
+              in map (flip V.unsafeBackpermute idxVec) rs
+        _ -> rs  
+      
+    

@@ -37,7 +37,7 @@ type Fun = CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
             -> (ByteString,ByteString) -> ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
 type Result = ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
 
-mkGeneList :: (Fun) -> CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> [(ByteString,[ByteString])]
+mkGeneList :: Fun -> CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> [(ByteString,[ByteString])]
 mkGeneList f c s x = foldr
                      (\p@(s1,s2) acc ->
                        let ((_,gs1),(_,gs2)) = f c s x p
@@ -46,7 +46,7 @@ mkGeneList f c s x = foldr
                            (str `B8.append` "_down", gs2):acc
                      ) []
                      
-mkReport :: (Fun) -> CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> Workbook
+mkReport :: Fun -> CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> Workbook
 mkReport f c s x ps =
   let ls = foldr (\e acc ->
                    let ((ws1,_),(ws2,_)) = f c s x e
@@ -260,33 +260,33 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (head
                                          ,("g1End",5+n1+n2+n1)
                                          ,("g2Beg",6+n1+n2+n1)
                                          ,("g2End",5+2*(n1+n2))
-                                         ] $ gFCAbsTemplate
+                                         ] gFCAbsTemplate
                               g1RawStr = render $
                                          setManyAttrib
                                          [("gBeg",4)
                                          ,("gEnd",3 + n1)
-                                         ] $ avgTemplate
+                                         ] avgTemplate
                               g2RawStr = render $
                                          setManyAttrib
                                          [("gBeg",4+n1)
                                          ,("gEnd",3+n1+n2)
-                                         ] $ avgTemplate
+                                         ] avgTemplate
                               g1NorStr = render $
                                          setManyAttrib
                                          [("gBeg",2+n1+n2)
                                          ,("gEnd",1+n1+n2+n1)
-                                         ] $ avgTemplate                                         
+                                         ] avgTemplate                                         
                               g2NorStr = render $
                                          setManyAttrib
                                          [("gBeg",1+n1+n2+n1)
                                          ,("gEnd",2*(n1+n2))
-                                         ] $ avgTemplate                                         
+                                         ] avgTemplate                                         
                           in (mkRow $ 
                               f1 (V.unsafeBackpermute vec headIdx) ++
                               map formula [ttestStr,fcAbsStr] ++ [string reg] ++
                               map formula [g1RawStr,g2RawStr,g1NorStr,g2NorStr] ++
                               f2 (V.unsafeBackpermute vec $
-                                  foldr (V.++) (V.empty)
+                                  foldr (V.++) V.empty
                                   [rawIdxG1,rawIdxG2,norIdxG1
                                   ,norIdxG2]) ++
                               f3 (V.unsafeBackpermute vec annoIdx)
@@ -306,7 +306,7 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (head
                                        ]
                            titleLs = begPart ++ fcStrs ++ gss ++
                                      map (header `at`)
-                                     (V.toList $ foldr (V.++) (V.empty) [rawIdxG1,rawIdxG2,norIdxG1,norIdxG2]) ++
+                                     (V.toList $ foldr (V.++) V.empty [rawIdxG1,rawIdxG2,norIdxG1,norIdxG2]) ++
                                      endPart
                            len = length titleLs
                            regStr = if isUp then "up" else "down"

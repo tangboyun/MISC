@@ -15,6 +15,7 @@ module Template where
 import Text.StringTemplate
 import Types
 import Data.List
+import Text.Printf
 
 vsRegex,log2Regex,cutOffRegex :: String
 vsRegex = "\\b\\w+ vs \\w+\\b"
@@ -36,16 +37,17 @@ gFCAbsTemplate =
 toTTestTemplate :: Stringable a => TTest -> StringTemplate a
 toTTestTemplate tCon = 
   newSTMP $ 
-  "=T.TEST(RC[$g1Beg$]:RC[$g1End$],RC[$g2Beg$]:RC[$g2End$],2,"++ typeStr ++")"
+  "=TTEST(RC[$g1Beg$]:RC[$g1End$],RC[$g2Beg$]:RC[$g2End$],2,"++ typeStr ++")"
   where
     typeStr = case tCon of
       Paired -> "1"
       _      -> "2"
 
-tfcTemplate, fcTemplate, lfcTemplate, afcTemplate, rgTemplate, tabHeaderTemplate, avgTemplate, grawTemplate, gnorTemplate :: Stringable a => StringTemplate a
-avgTemplate =
-  newSTMP
-  "=AVERAGE(RC[$gBeg$]:RC[$gEnd$])"
+tfcTemplate, fcTemplate, lfcTemplate, afcTemplate, rgTemplate, tabHeaderTemplate, grawTemplate, gnorTemplate :: Stringable a => StringTemplate a
+
+avgStr :: Int -> Int -> String
+avgStr beg end =
+  "=AVERAGE(" ++ (intercalate ", " $ map (\i -> "RC[" ++ show i ++ "]") [beg..end]) ++ ")"
 
 tfcTemplate = newSTMP
               "=SUM(RC[$rc3Beg$]:RC[$rc3End$])/SUM(RC[$rc4Beg$]:RC[$rc4End$])"
@@ -186,7 +188,8 @@ scatterPlotStr =
   \    Press Ctrl and rolling button of your mouse to zoom in.\n"
 
 clustringTemplate :: Stringable a => StringTemplate a
-clustringTemplate = newSTMP
+clustringTemplate =
+  newSTMP
   "Heat Map and Unsupervised Hierarchical Clustering\n\n\
   \    Hierarchical clustering is one of the simplest and widely used clustering \
   \techniques for analysis of gene expression data. Cluster analysis arranges samples into \
@@ -196,3 +199,26 @@ clustringTemplate = newSTMP
   \Your experiment consists of $nSample$ different samples. The result of hierarchical clustering on \
   \conditions shows distinguishable gene expression profiling among samples.\n\n\
   \    Press Ctrl and rolling button of your mouse to zoom in.\n"
+
+
+volcanoPoltStr :: CutOff -> Setting -> String
+volcanoPoltStr (C fc (Just (_,p))) (Setting c r _) =
+  "Volcano Plots\n\n\
+  \    Volcano Plots are useful tools for visualizing differential expression between two different conditions. \
+  \They are constructed using fold-change values and P-values, and thus allow you to visulaize the relationship \
+  \between fold-change (magnitude of change) and statistical significance \
+  \(which takes both magnitude of change and variability into consideration). \
+  \They also allow subsets of genes to be isolated, based on those values.\n\n\
+  \    The vertical lines correspond to "++ fcCutOff ++"-fold up and down and the horizontal line \
+  \represents a P-value of "++ pCutOff ++ ". So the red point in the plot represents the differentially \
+  \expressed " ++ polymer ++ " with statistical significance.\n\n\
+  \    Press Ctrl and rolling button of your mouse to zoom in.\n\
+  \    Note: Points with p <= 1e-4 are set to 1e-4.\n"
+  where
+    fcCutOff = printf "%.1f" fc
+    pCutOff = printf "%.2f" p
+    polymer = case c of
+                GE -> "genes"
+                _  -> case r of
+                       Coding -> "mRNAs" 
+                       _      -> "LncRNAs"

@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings, FlexibleContexts, BangPatterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 差异表达报表
@@ -12,7 +12,16 @@
 --
 -----------------------------------------------------------------------------
 
-module DiffExp where
+module DiffExp
+       (
+         mkHybGeneList
+       , mkFCGeneList
+       , mkVPGeneList
+       , mkHybReport
+       , mkFCReport
+       , mkVPReport
+       )
+       where
 
 import           Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B8
@@ -37,34 +46,80 @@ type Fun = CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
             -> (ByteString,ByteString) -> ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
 type Result = ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
 
+volcanoPlotSheet :: CutOff -> Setting -> Worksheet
+volcanoPlotSheet c s =
+  let str = volcanoPoltStr c s
+      idx = fromIntegral $ length (filter (== '\n') str) + 8
+  in mkWorksheet (Name "Volcano Plots") $ mkTable
+     (mkRow
+      [string str
+       # mergeAcross 17 --
+       # mergeDown (idx - 2)
+       # withStyleID "allHead"
+       # addTextPropertyAtRanges [(0, fromJust $ elemIndex '\n' str)]
+                                 [Bold, Text $ dfp {size = Just 14}]
+      ] : zipWith (\i r -> r # begAtIdx i)
+      [idx..] (replicate 100 emptyRow))
+     # withStyleID "white"
+
+preprocess :: Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> (V.Vector ByteString,[V.Vector ByteString])
+preprocess setting (h,vecs) =
+  let (header:vs) = removeUnusedAnno setting $ 
+                    reorganize $ -- 保证样品与组是连续排列的
+                    V.map removeDQ h: vecs
+  in (header,vs)
+
 mkGeneList :: Fun -> CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> [(ByteString,[ByteString])]
 mkGeneList f c s x = foldr
                      (\p@(s1,s2) acc ->
-                       let ((_,gs1),(_,gs2)) = f c s x p
+                       let ((_,gs1),(_,gs2)) = f c s (preprocess s x) p
                            str = s1 `B8.append` " vs " `B8.append` s2
                        in  (str `B8.append` "_up", gs1):
                            (str `B8.append` "_down", gs2):acc
                      ) []
-                     
+
+mkHybGeneList :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> (GroupList,SampleList) -> [(ByteString,[ByteString])]
+mkHybGeneList c s x (G gs, S ss) = mkVPGeneList c s x gs ++
+                                   mkFCGeneList c s x ss
+  
 mkReport :: Fun -> CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> Workbook
 mkReport f c s x ps =
   let ls = foldr (\e acc ->
-                   let ((ws1,_),(ws2,_)) = f c s x e
+                   let ((ws1,_),(ws2,_)) = f c s (preprocess s x) e
                    in ws1:ws2:acc
                  ) [] ps
-  in mkWorkbook ls # addStyle (Name "upTitle") upTitle
-                   # addStyle (Name "dnTitle") dnTitle
-                   # addStyle (Name "boldCell") boldCell
-                   # addStyle (Name "frCell") frCellStyle
-                   # addStyle (Name "riCell") riCellStyle
-                   # addStyle (Name "niCell") niCellStyle
-                   # addStyle (Name "annoCell") annoCellStyle
-                   # addStyle (Name "noteCell") noteCellStyle
-                   # addStyle (Name "title" ) title
-                   # addStyle (Name "groupRawCell") groupRawCellStyle
-                   # addStyle (Name "groupNorCell") groupNorCellStyle                   
-                   # addStyle (Name "Default") defaultS
-  
+  in addStyles $ mkWorkbook ls
+     
+addStyles :: Workbook -> Workbook
+addStyles w = w # addStyle (Name "upTitle") upTitle
+                # addStyle (Name "dnTitle") dnTitle
+                # addStyle (Name "boldCell") boldCell
+                # addStyle (Name "frCell") frCellStyle
+                # addStyle (Name "riCell") riCellStyle
+                # addStyle (Name "niCell") niCellStyle
+                # addStyle (Name "annoCell") annoCellStyle
+                # addStyle (Name "noteCell") noteCellStyle
+                # addStyle (Name "title" ) title
+                # addStyle (Name "groupRawCell") groupRawCellStyle
+                # addStyle (Name "groupNorCell") groupNorCellStyle                   
+                # addStyle (Name "allHead") allHeadStyle
+                # addStyle (Name "white") whiteCellStyle
+                # addStyle (Name "Default") defaultS
+                
+mkHybReport :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> (GroupList,SampleList) -> Workbook
+mkHybReport c s x (G gs, S ss) =
+  let gSheets = foldr
+                (\e acc ->
+                  let ((ws1,_),(ws2,_)) = groupSheet c s x' e
+                  in ws1:ws2:acc
+                ) [] gs
+      sSheets = foldr
+                (\e acc ->
+                  let ((ws1,_),(ws2,_)) = sampleSheet c s x' e
+                  in ws1:ws2:acc
+                ) [] ss
+      x' = preprocess s x
+  in addStyles $ mkWorkbook $ volcanoPlotSheet c s : gSheets ++ sSheets
 
 mkFCGeneList, mkVPGeneList :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> [(ByteString,[ByteString])]
 mkFCGeneList = mkGeneList sampleSheet
@@ -73,13 +128,14 @@ mkVPGeneList = mkGeneList groupSheet
 
 mkFCReport, mkVPReport :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> Workbook
 mkFCReport = mkReport sampleSheet
-mkVPReport = mkReport groupSheet
+mkVPReport c s x ps = let wb = mkReport groupSheet c s x ps
+                          sheet = volcanoPlotSheet c s
+                      in wb { workbookWorksheets = sheet : workbookWorksheets wb }
 
 sampleSheet :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
             -> (ByteString,ByteString) -> ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
-sampleSheet (C f _) setting@(Setting chip rna _) (header',vecs) (s1,s2) =
-  let header = V.map removeDQ header'
-      rawIdxs = V.findIndices ("(raw)" `isSuffixOf`) header
+sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
+  let rawIdxs = V.findIndices ("(raw)" `isSuffixOf`) header
       norIdxs = V.findIndices ("(normalized)" `isSuffixOf`) header
       gsIdx = fromJust $ V.findIndex (== "GeneSymbol") header
       at = V.unsafeIndex
@@ -87,9 +143,8 @@ sampleSheet (C f _) setting@(Setting chip rna _) (header',vecs) (s1,s2) =
       rawIdxS2 = fromJust $ V.find ((== s2). extractS . (header `at`)) rawIdxs
       norIdxS1 = fromJust $ V.find ((== s1). extractS . (header `at`)) norIdxs
       norIdxS2 = fromJust $ V.find ((== s2). extractS . (header `at`)) norIdxs
-      
-      fc i j vec = let v = (read $! B8.unpack $! vec `at` i) - (read $! B8.unpack $! vec `at` j)
-                   in (signum v * (2 ** abs v),vec)
+      fc i j vec = let v = (read $ B8.unpack $ vec `at` i) - (read $ B8.unpack $ vec `at` j)
+                      in (signum v * (2 ** abs v),vec)
       mkRowIdx isUp vec = let (minI,maxI) = findNumPart header
                               ls = [0..V.length header - 1]
                               headIdx = V.fromList $ take minI ls
@@ -197,11 +252,8 @@ sampleSheet (C f _) setting@(Setting chip rna _) (header',vecs) (s1,s2) =
   
 groupSheet :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
            -> (ByteString,ByteString) -> ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
-groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (header',vecs') (gs1,gs2) =
-  let (header:vecs) = removeUnusedAnno setting $ 
-                      reorganize $ -- 保证样品与组是连续排列的
-                      V.map removeDQ header' : vecs'
-      at = V.unsafeIndex
+groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (header,vecs) (gs1,gs2) =
+  let at = V.unsafeIndex
       gsIdx = fromJust $ V.findIndex (== "GeneSymbol") header
       rawIdxs = V.findIndices (\e ->
                                 let g = extractG e
@@ -231,14 +283,14 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (head
             v2 = extractNumeric vec idxVec2
         in tfun v1 v2
       (ups,dns) = partition
-                  (\v -> fc norIdxG1 norIdxG2 v > 0) $
-                  filter
-                  (\vec ->
-                    let foldChange = fc norIdxG1 norIdxG2 vec
-                        p = ttest norIdxG1 norIdxG2 vec
-                    in abs foldChange >= fcCutOff &&
-                       p <= pCutOff
-                  ) vecs
+                    (\v -> fc norIdxG1 norIdxG2 v > 0) $
+                    filter
+                    (\vec ->
+                      let foldChange = fc norIdxG1 norIdxG2 vec
+                          p = ttest norIdxG1 norIdxG2 vec
+                      in abs foldChange >= fcCutOff &&
+                         p <= pCutOff
+                    ) vecs
       mkRowIdx isUp vec = let (minI,maxI) = findNumPart header
                               ls = [0..V.length header - 1]
                               headIdx = V.fromList $ take minI ls
@@ -261,27 +313,11 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (head
                                          ,("g2Beg",6+n1+n2+n1)
                                          ,("g2End",5+2*(n1+n2))
                                          ] gFCAbsTemplate
-                              g1RawStr = render $
-                                         setManyAttrib
-                                         [("gBeg",4)
-                                         ,("gEnd",3 + n1)
-                                         ] avgTemplate
-                              g2RawStr = render $
-                                         setManyAttrib
-                                         [("gBeg",4+n1)
-                                         ,("gEnd",3+n1+n2)
-                                         ] avgTemplate
-                              g1NorStr = render $
-                                         setManyAttrib
-                                         [("gBeg",2+n1+n2)
-                                         ,("gEnd",1+n1+n2+n1)
-                                         ] avgTemplate                                         
-                              g2NorStr = render $
-                                         setManyAttrib
-                                         [("gBeg",1+n1+n2+n1)
-                                         ,("gEnd",2*(n1+n2))
-                                         ] avgTemplate                                         
-                          in (mkRow $ 
+                              g1RawStr = avgStr 4 (3 + n1)
+                              g2RawStr = avgStr (4+n1) (3+n1+n2)
+                              g1NorStr = avgStr (2+n1+n2) (1+n1+n2+n1)                         
+                              g2NorStr = avgStr (1+n1+n2+n1) (2*(n1+n2))                       
+                          in (mkRow $
                               f1 (V.unsafeBackpermute vec headIdx) ++
                               map formula [ttestStr,fcAbsStr] ++ [string reg] ++
                               map formula [g1RawStr,g2RawStr,g1NorStr,g2NorStr] ++
@@ -294,17 +330,17 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (head
       tabHeader isUp = let (minI,maxI) = findNumPart header
                            ls = [0..V.length header - 1]
                            begPart = V.toList $ V.unsafeBackpermute header $
-                                     V.fromList $ take minI ls
+                                      V.fromList $ take minI ls
                            endPart = V.toList $ V.unsafeBackpermute header $
-                                     V.fromList $ drop (maxI + 1) ls
+                                      V.fromList $ drop (maxI + 1) ls
                            fcStrs = map (render . setManyAttrib [("s1",gs1),("s2",gs2)]) 
-                                    [afcTemplate,rgTemplate]
+                                     [afcTemplate,rgTemplate]
                            gss = [render $ setAttribute "g" gs1 grawTemplate
-                                       ,render $ setAttribute "g" gs2 grawTemplate
-                                       ,render $ setAttribute "g" gs1 gnorTemplate
-                                       ,render $ setAttribute "g" gs2 gnorTemplate
-                                       ]
-                           titleLs = begPart ++ fcStrs ++ gss ++
+                                 ,render $ setAttribute "g" gs2 grawTemplate
+                                 ,render $ setAttribute "g" gs1 gnorTemplate
+                                 ,render $ setAttribute "g" gs2 gnorTemplate
+                                 ]
+                           titleLs = begPart ++["P-value"] ++ fcStrs ++ gss ++
                                      map (header `at`)
                                      (V.toList $ foldr (V.++) V.empty [rawIdxG1,rawIdxG2,norIdxG1,norIdxG2]) ++
                                      endPart
@@ -349,10 +385,10 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (head
                                       # addTextPropertyAtRanges (noteStr `match` log2Regex) [Bold, Text $ dfp {color= Just dodgerblue}] 
                            note = mkRow [noteCell]
                            mol = case chip of
-                                  GE -> "genes"
-                                  _  -> case rna of
-                                    Coding -> "mRNAs"
-                                    _      -> "LncRNAs"
+                             GE -> "genes"
+                             _  -> case rna of
+                               Coding -> "mRNAs"
+                               _      -> "LncRNAs"
                            line1 = mkRow
                                    [withStyleID titleS $
                                     mergeAcross (fromIntegral $ len - 1) $
@@ -376,8 +412,8 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (head
                            line3 = mkRow $
                                    map (withStyleID "boldCell" . string . B8.unpack) titleLs
                            idxLen = fromIntegral $ length (filter (== '\n') $ groupStr setting) + 2  -- 首尾各空一行                                 
-                       in 
-                          ([note
+                        in 
+                         ([note
                           ,emptyRow # begAtIdx (idxLen + 2)
                           ,emptyRow # begAtIdx (idxLen + 3)
                           ,line1 # begAtIdx (idxLen + 4)
@@ -389,7 +425,6 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (head
           (\a b ->
             (unzip $ map (mkRowIdx True) a
             ,unzip $ map (mkRowIdx False) b)) (ups,dns)
-          
       upSheet = let (hs,begIdx) = tabHeader True
                 in mkWorksheet (Name $ B8.unpack gs1 ++ " vs " ++ B8.unpack gs2 ++ "_up") $
                    mkTable $ hs ++ zipWith (\idx row -> row # begAtIdx idx) [begIdx..] upRows

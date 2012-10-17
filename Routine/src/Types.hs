@@ -13,6 +13,8 @@
 
 module Types where
 
+import           Data.ByteString.Lazy.Char8 (ByteString)
+
 data CutOff = C
               !Double -- fold change
               !(Maybe (TTest,Double)) -- p
@@ -35,3 +37,5 @@ data Species = Human
              | Rat
              | Mouse
              deriving (Eq)
+newtype GroupList = G [(ByteString,ByteString)]
+newtype SampleList = S [(ByteString,ByteString)]

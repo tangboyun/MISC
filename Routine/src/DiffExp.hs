@@ -12,16 +12,7 @@
 --
 -----------------------------------------------------------------------------
 
-module DiffExp
-       (
-         mkHybGeneList
-       , mkFCGeneList
-       , mkVPGeneList
-       , mkHybReport
-       , mkFCReport
-       , mkVPReport
-       )
-       where
+module DiffExp where
 
 import           Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B8
@@ -78,7 +69,7 @@ mkGeneList f c s x = foldr
                            (str `B8.append` "_down", gs2):acc
                      ) []
 
-mkHybGeneList :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> (GroupList,SampleList) -> [(ByteString,[ByteString])]
+mkHybGeneList :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> (GroupPairs,SamplePairs) -> [(ByteString,[ByteString])]
 mkHybGeneList c s x (G gs, S ss) = mkVPGeneList c s x gs ++
                                    mkFCGeneList c s x ss
   
@@ -101,12 +92,12 @@ addStyles w = w # addStyle (Name "upTitle") upTitle
                 # addStyle (Name "noteCell") noteCellStyle
                 # addStyle (Name "title" ) title
                 # addStyle (Name "groupRawCell") groupRawCellStyle
-                # addStyle (Name "groupNorCell") groupNorCellStyle                   
+                # addStyle (Name "groupNorCell") groupNorCellStyle
                 # addStyle (Name "allHead") allHeadStyle
                 # addStyle (Name "white") whiteCellStyle
                 # addStyle (Name "Default") defaultS
                 
-mkHybReport :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> (GroupList,SampleList) -> Workbook
+mkHybReport :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> (GroupPairs,SamplePairs) -> Workbook
 mkHybReport c s x (G gs, S ss) =
   let gSheets = foldr
                 (\e acc ->

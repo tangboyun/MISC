@@ -139,7 +139,7 @@ allTargetWB set@(Setting c r _) str =
                    # addStyle (Name "allHead") allHeadStyle
                    # addStyle (Name "Default") defaultS
                    # addStyle (Name "white") whiteCellStyle
-      infos = hs ++ [B8.pack $ "Num of entities:" ++ " " ++ show (length rs - 1)]
+      infos = hs ++ [B8.pack $ "Num of entities:" ++ " " ++ show ((fromIntegral $ B8.count '\n' str) - length hs - 1)]
   in case c of
     GE -> (addS $ mkWorkbook $ map (\(n,t) -> mkWorksheet (Name n) t) tables,infos)
     _  -> case r of

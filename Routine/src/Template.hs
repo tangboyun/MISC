@@ -58,6 +58,7 @@ lfcTemplate = newSTMP
               "Log Fold change([$s1$] vs [$s2$])"
 afcTemplate = newSTMP
               "Absolute Fold change([$s1$] vs [$s2$])"
+              
 rgTemplate = newSTMP
              "Regulation([$s1$] vs [$s2$])"
 grawTemplate = newSTMP
@@ -84,7 +85,7 @@ groupStr (Setting _ rna spec) =
       \\n\
       \# Column A: ProbeName, it represents probe name.\n\
       \# Column B: P-value, the p-values calculated from $pairOrUnpair$ t-test.\n\
-      \# Column C: FC (abs), Absolute Fold change between two groups. \n\
+      \# Column C: Absolute Fold change, the absolute fold change between two groups. \n\
       \# Column D: Regulation, it depicts which group has greater or lower intensity values wrt other group.\n\
       \# Column E, F: Raw intensity of each group.\n\
       \# Column G, H: Normalized intensity of each group (log2 transformed).\n\

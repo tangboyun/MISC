@@ -135,8 +135,8 @@ parseATheads =
      let regex = "[^0-9]*([0-9]+) out of ([0-9]+).*" :: String
      in tail . head . head . filter (not . null) . map (getAllTextSubmatches . (=~ regex))
                   
-parseTSV :: ByteString -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
-parseTSV str (Setting _ rna _) =
+parseTSV :: Setting -> ByteString -> (V.Vector ByteString,[V.Vector ByteString])
+parseTSV (Setting _ rna _) str =
   (\ls ->
     let i = fromJust $ V.elemIndex "Number Passed" h
         j = fromJust $ V.elemIndex "GeneSymbol" h

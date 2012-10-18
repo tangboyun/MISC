@@ -18,6 +18,7 @@ import           Data.Colour.Names
 defaultS = emptyStyle { fontName = Just "Times New Roman"
                       , fontFamily = Just "Roman"
                       , fontSize = Just 10
+                      , hAlign = Just "Left"
                       }
 boldCell = defaultS { fontIsBold = Just True }
 title = boldCell { hAlign = Just "Center" }

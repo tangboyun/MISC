@@ -37,5 +37,5 @@ data Species = Human
              | Rat
              | Mouse
              deriving (Eq)
-newtype GroupList = G [(ByteString,ByteString)]
-newtype SampleList = S [(ByteString,ByteString)]
+newtype GroupPairs = G [(ByteString,ByteString)]
+newtype SamplePairs = S [(ByteString,ByteString)]

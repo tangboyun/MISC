@@ -34,7 +34,7 @@ import           UtilFun
 
 
 allTargetWB :: Setting -> ByteString -> (Workbook, [ByteString])
-allTargetWB set@(Setting c r _) str =
+allTargetWB set@(Setting c r _ _) str =
   let ss = B8.lines str
       (hs,rs) = span ((== '#') . B8.head) ss
       atHeadStr = parseATheads $ map B8.unpack hs
@@ -83,7 +83,7 @@ allTargetWB set@(Setting c r _) str =
                    # mergeDown idxLen
                    # withStyleID "allHead"
                    # addTextPropertyAtRanges [(0, fromJust $ elemIndex '\n' atNoteStr)]
-                                             [Bold, Text $ dfp {size = Just 14}]
+                                             [Bold, Text $ dfp {size = Just 12}]
                    # addTextPropertyAtRanges (atNoteStr `match` log2Regex)
                                              [Bold, Text $ dfp {color= Just dodgerblue}]                    
       note = mkRow [atNoteCell]
@@ -109,24 +109,24 @@ allTargetWB set@(Setting c r _) str =
                     ,idxLen + 6)
       table1 = mkTable $
                hs1 ++ zipWith (\idx row -> row # begAtIdx idx) [begIdx..] rows
-      table str = let idx = fromIntegral $ length (filter (== '\n') str) + 8
+      table str = let idx = fromIntegral $ length (filter (== '\n') str) + 4
                   in
                    mkTable
                    (mkRow
                     [string str
                      # mergeAcross 17 --
-                     # mergeDown (idx - 2)
+                     # mergeDown idx 
                      # withStyleID "allHead"
                      # addTextPropertyAtRanges [(0, fromJust $ elemIndex '\n' str)]
-                                               [Bold, Text $ dfp {size = Just 14}]
+                                               [Bold, Text $ dfp {size = Just 12}]
                     ] : zipWith (\i r -> r # begAtIdx i)
-                    [idx..] (replicate 100 emptyRow))
+                    [idx+2 ..] (replicate 100 emptyRow))
                    # withStyleID "white"
       tables =
         zip ["All Targets Value"
             ,"Box Plot"
             ,"Scatter Plot"
-            ,"Hierarchical Clustering Map"] $
+            ,"Clustering Map"] $
         table1 :
         map table
         [boxPlotStr

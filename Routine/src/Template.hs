@@ -73,7 +73,7 @@ groupTemplate :: Stringable a => Setting -> StringTemplate a
 groupTemplate = newSTMP . groupStr
 
 groupStr :: Setting -> String  
-groupStr (Setting _ rna spec) =
+groupStr (Setting _ rna spec _) =
   case rna of
     Coding -> commonStr
     _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr]
@@ -98,7 +98,7 @@ sampleTemplate = newSTMP . sampleStr
 
 
 sampleStr :: Setting -> String
-sampleStr (Setting _ rna spec) =
+sampleStr (Setting _ rna spec _) =
   case rna of
     Coding -> commonStr
     _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr]
@@ -161,7 +161,7 @@ allTargetTemplate :: Stringable a => Setting -> StringTemplate a
 allTargetTemplate = newSTMP . allTargetStr 
 
 allTargetStr :: Setting -> String
-allTargetStr (Setting chip rna spec) =
+allTargetStr (Setting chip rna spec _) =
   case rna of
     Coding -> commonStr
     _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr]
@@ -203,7 +203,7 @@ clustringTemplate =
 
 
 volcanoPoltStr :: CutOff -> Setting -> String
-volcanoPoltStr (C fc (Just (_,p))) (Setting c r _) =
+volcanoPoltStr (C fc (Just (_,p))) (Setting c r _ _) =
   "Volcano Plots\n\n\
   \    Volcano Plots are useful tools for visualizing differential expression between two different conditions. \
   \They are constructed using fold-change values and P-values, and thus allow you to visulaize the relationship \

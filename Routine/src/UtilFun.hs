@@ -31,7 +31,7 @@ import           Types
 import           Statistics.Sample
 import           Statistics.Distribution
 import           Statistics.Distribution.StudentT
-         
+import           Text.Regex.Posix
 
 ttestUnpaired,ttestPaired :: V.Vector Double -> V.Vector Double -> Double
 
@@ -58,15 +58,23 @@ ttestPaired !v1 !v2 | V.length v1 == V.length v2 =
   in 2 * cumulative dis (negate $! abs t)
                     | otherwise = error "unequal sample size."
 
+preprocess :: Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> (V.Vector ByteString,[V.Vector ByteString])
+preprocess setting (h,vecs) =
+  let (header:vs) = removeUnusedAnno setting $ 
+                    reorganize $ -- 保证样品与组是连续排列的
+                    V.map removeDQ h: vecs
+  in (header,vs)
+
+
 removeUnusedAnno :: Setting -> [V.Vector ByteString] -> [V.Vector ByteString]
 removeUnusedAnno _ [] = []
-removeUnusedAnno (Setting c r _) rs@(h:_) =
+removeUnusedAnno (Setting c r _ _) rs@(h:rows) =
   case c of
-    GE ->
-      case V.elemIndex "ControlType" h of
+    GE -> 
+      case V.findIndex (=~ B8.pack "\\s*[Cc]ontrol.*[Tt]ype\\s*") h of
         Nothing -> rs
         Just i  -> map (V.ifilter (\idx _ -> idx /= i)) $
-                   h : filter (\vec -> vec `V.unsafeIndex` i == "false" ) (tail rs)
+                   h : filter (\vec -> vec `V.unsafeIndex` i == "false" ) rows
     _ ->
       case r of
         NonCoding ->
@@ -136,7 +144,7 @@ parseATheads =
      in tail . head . head . filter (not . null) . map (getAllTextSubmatches . (=~ regex))
                   
 parseTSV :: Setting -> ByteString -> (V.Vector ByteString,[V.Vector ByteString])
-parseTSV (Setting _ rna _) str =
+parseTSV (Setting _ rna _ _) str =
   (\ls ->
     let i = fromJust $ V.elemIndex "Number Passed" h
         j = fromJust $ V.elemIndex "GeneSymbol" h

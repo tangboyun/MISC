@@ -35,7 +35,7 @@ allHeadStyle = defaultS
   , vAlign = Just "Top"
   , hAlign = Just "Left"
   , wrapText = Just True
-  , fontSize = Just 12
+  , fontSize = Just 10
   }
   
 frCellStyle = title { bgColor = Just orange }

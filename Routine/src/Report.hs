@@ -17,7 +17,7 @@ import System.Environment
 import DiffExp
 import           Text.XML.SpreadsheetML.Writer (showSpreadsheet)
 import           Text.XML.SpreadsheetML.Builder
-import Text.XML.SpreadsheetML.Types
+import Text.XML.SpreadsheetML.Types hiding (Formula)
 import qualified Data.ByteString.Lazy.Char8 as B8
 
 import System.FilePath
@@ -31,25 +31,24 @@ import Wrapper
 mkdir fp = doesDirectoryExist fp >>=
            flip unless (createDirectory fp) 
 
-sp = [("MI","Sham")
-     ,("L", "MI")
-     ,("M", "MI")
-     ,("H", "MI")
-     ,("M", "L")
-     ,("H", "L")
-     ,("H", "M")]
+sp = [("C","N")
+     ,("F", "N")
+     ,("F", "C")
+     ]
   
 main :: IO ()
 main = do
   mkdir "result" >> mkdir "GoGene" >> mkdir "PathGene"
   inPut:_ <- getArgs
 --  inStr <- B8.readFile inPut
-  let setting = Setting GE Coding Mouse
+  let setting = Setting Lnc Coding Rat Formula
       cutOff = C 1.5 (Just (Unpaired,0.05))
 --      (allTarget,infos) = allTargetWB setting inStr
---  toATVWB setting inPut "out.xml" "log.txt"
+  (allTarget,infos) <- fToATVWB setting inPut
+  writeFile "All.xml" $ showSpreadsheet allTarget
+  
   wb <- fToVPReport cutOff setting inPut sp
-  writeFile "test.xml" $ showSpreadsheet wb
+  writeFile "DEG.xml" $ showSpreadsheet wb
   --    x = parseTSV setting inStr
   -- writeFile ("result" </> "All.xml") $ showSpreadsheet allTarget
   -- B8.appendFile ("result" </> "note.txt") $ B8.unlines infos

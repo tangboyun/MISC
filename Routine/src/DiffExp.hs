@@ -53,33 +53,7 @@ volcanoPlotSheet c s =
       [idx..] (replicate 100 emptyRow))
      # withStyleID "white"
 
-preprocess :: Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> (V.Vector ByteString,[V.Vector ByteString])
-preprocess setting (h,vecs) =
-  let (header:vs) = removeUnusedAnno setting $ 
-                    reorganize $ -- 保证样品与组是连续排列的
-                    V.map removeDQ h: vecs
-  in (header,vs)
 
-mkGeneList :: Fun -> CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> [(ByteString,[ByteString])]
-mkGeneList f c s x = foldr
-                     (\p@(s1,s2) acc ->
-                       let ((_,gs1),(_,gs2)) = f c s (preprocess s x) p
-                           str = s1 `B8.append` " vs " `B8.append` s2
-                       in  (str `B8.append` "_up", gs1):
-                           (str `B8.append` "_down", gs2):acc
-                     ) []
-
-mkHybGeneList :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> (GroupPairs,SamplePairs) -> [(ByteString,[ByteString])]
-mkHybGeneList c s x (G gs, S ss) = mkVPGeneList c s x gs ++
-                                   mkFCGeneList c s x ss
-  
-mkReport :: Fun -> CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> Workbook
-mkReport f c s x ps =
-  let ls = foldr (\e acc ->
-                   let ((ws1,_),(ws2,_)) = f c s (preprocess s x) e
-                   in ws1:ws2:acc
-                 ) [] ps
-  in addStyles $ mkWorkbook ls
      
 addStyles :: Workbook -> Workbook
 addStyles w = w # addStyle (Name "upTitle") upTitle
@@ -97,35 +71,10 @@ addStyles w = w # addStyle (Name "upTitle") upTitle
                 # addStyle (Name "white") whiteCellStyle
                 # addStyle (Name "Default") defaultS
                 
-mkHybReport :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> (GroupPairs,SamplePairs) -> Workbook
-mkHybReport c s x (G gs, S ss) =
-  let gSheets = foldr
-                (\e acc ->
-                  let ((ws1,_),(ws2,_)) = groupSheet c s x' e
-                  in ws1:ws2:acc
-                ) [] gs
-      sSheets = foldr
-                (\e acc ->
-                  let ((ws1,_),(ws2,_)) = sampleSheet c s x' e
-                  in ws1:ws2:acc
-                ) [] ss
-      x' = preprocess s x
-  in addStyles $ mkWorkbook $ volcanoPlotSheet c s : gSheets ++ sSheets
-
-mkFCGeneList, mkVPGeneList :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> [(ByteString,[ByteString])]
-mkFCGeneList = mkGeneList sampleSheet
-mkVPGeneList = mkGeneList groupSheet
-
-
-mkFCReport, mkVPReport :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> [(ByteString,ByteString)] -> Workbook
-mkFCReport = mkReport sampleSheet
-mkVPReport c s x ps = let wb = mkReport groupSheet c s x ps
-                          sheet = volcanoPlotSheet c s
-                      in wb { workbookWorksheets = sheet : workbookWorksheets wb }
 
 sampleSheet :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
             -> (ByteString,ByteString) -> ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
-sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
+sampleSheet (C f _) setting@(Setting chip rna _ sheet) (header,vecs) (s1,s2) =
   let rawIdxs = V.findIndices ("(raw)" `isSuffixOf`) header
       norIdxs = V.findIndices ("(normalized)" `isSuffixOf`) header
       gsIdx = fromJust $ V.findIndex (== "GeneSymbol") header
@@ -135,7 +84,7 @@ sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
       norIdxS1 = fromJust $ V.find ((== s1). extractS . (header `at`)) norIdxs
       norIdxS2 = fromJust $ V.find ((== s2). extractS . (header `at`)) norIdxs
       fc i j vec = let v = (read $ B8.unpack $ vec `at` i) - (read $ B8.unpack $ vec `at` j)
-                      in (signum v * (2 ** abs v),vec)
+                   in (signum v * (2 ** abs v),vec)
       mkRowIdx isUp vec = let (minI,maxI) = findNumPart header
                               ls = [0..V.length header - 1]
                               headIdx = V.fromList $ take minI ls
@@ -144,9 +93,15 @@ sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
                               f2 = map (number . read . B8.unpack) . V.toList
                               f3 = map (toCell . B8.unpack) . V.toList
                               reg = if isUp then "up" else "down"
+                              fcV = fst $ fc norIdxS1 norIdxS2 vec
+                              lfcV = signum fcV * (logBase 2 afcV)
+                              afcV = abs fcV
+                              calcPart = case sheet of
+                                           Numeric -> map number [fcV,lfcV,afcV]
+                                           _       -> map formula [fcFormula,lfcFormula,afcFormula]
                           in (mkRow $ 
                               f1 (V.unsafeBackpermute vec headIdx) ++
-                              map formula [fcFormula,lfcFormula,afcFormula] ++ [string reg] ++
+                              calcPart ++ [string reg] ++
                               f2 (V.unsafeBackpermute vec $
                                V.fromList [rawIdxS1,rawIdxS2,norIdxS1
                                           ,norIdxS2]) ++
@@ -243,7 +198,7 @@ sampleSheet (C f _) setting@(Setting chip rna _) (header,vecs) (s1,s2) =
   
 groupSheet :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
            -> (ByteString,ByteString) -> ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
-groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (header,vecs) (gs1,gs2) =
+groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _ sheet) (header,vecs) (gs1,gs2) =
   let at = V.unsafeIndex
       gsIdx = fromJust $ V.findIndex (== "GeneSymbol") header
       rawIdxs = V.findIndices (\e ->
@@ -304,14 +259,27 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (head
                                          ,("g2Beg",6+n1+n2+n1)
                                          ,("g2End",5+2*(n1+n2))
                                          ] gFCAbsTemplate
+                              calcPart1 = case sheet of
+                                            Numeric -> map number
+                                                       [ttest norIdxG1 norIdxG2 vec
+                                                       ,abs $ fc norIdxG1 norIdxG2 vec]
+                                            _       -> map formula [ttestStr,fcAbsStr]
+                              calcPart2 = case sheet of
+                                            Numeric -> map number
+                                                       [mean $ extractNumeric vec rawIdxG1
+                                                       ,mean $ extractNumeric vec rawIdxG2
+                                                       ,mean $ extractNumeric vec norIdxG1
+                                                       ,mean $ extractNumeric vec norIdxG2                                                        
+                                                       ]
+                                            _       -> map formula [g1RawStr,g2RawStr,g1NorStr,g2NorStr]
                               g1RawStr = avgStr 4 (3 + n1)
                               g2RawStr = avgStr (3+n1) (2+n1+n2)
                               g1NorStr = avgStr (2+n1+n2) (1+n1+n2+n1)                         
                               g2NorStr = avgStr (1+n1+n2+n1) (2*(n1+n2))                       
                           in (mkRow $
                               f1 (V.unsafeBackpermute vec headIdx) ++
-                              map formula [ttestStr,fcAbsStr] ++ [string reg] ++
-                              map formula [g1RawStr,g2RawStr,g1NorStr,g2NorStr] ++
+                              calcPart1 ++ [string reg] ++
+                              calcPart2 ++
                               f2 (V.unsafeBackpermute vec $
                                   foldr (V.++) V.empty
                                   [rawIdxG1,rawIdxG2,norIdxG1

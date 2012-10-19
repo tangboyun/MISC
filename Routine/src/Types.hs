@@ -20,7 +20,7 @@ data CutOff = C
               !(Maybe (TTest,Double)) -- p
               deriving (Eq)
 
-data Setting = Setting Chip RNA Species
+data Setting = Setting Chip RNA Species Sheet
                deriving (Eq)
 
 data RNA = Coding
@@ -39,3 +39,7 @@ data Species = Human
              deriving (Eq)
 newtype GroupPairs = G [(ByteString,ByteString)]
 newtype SamplePairs = S [(ByteString,ByteString)]
+
+data Sheet = Formula
+           | Numeric
+           deriving (Eq)

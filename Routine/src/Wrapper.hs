@@ -28,35 +28,11 @@ import Control.Arrow ((&&&))
 import Control.Applicative
 import Control.Exception
 
-toATVWB :: Setting -> FilePath  -> FilePath -> FilePath -> IO ()
-toATVWB s inFile outFile logFile =
-  do
-    _ <- bracket (openFile inFile ReadMode) (hClose)
-         (\h1 ->
-           do
-             (wb,_) <- hToATVWB s h1
-             _ <- bracket (openFile outFile WriteMode) (hClose) $
-                  (\h2 ->
-                    hPutStr h2 $ showSpreadsheet wb)
-             return ()
-         )
-    _ <- bracket (openFile inFile ReadMode) (hClose)
-         (\h1 ->
-           do
-             (_,gs) <- hToATVWB s h1
-             _ <- bracket
-                  (openFile logFile AppendMode)
-                  (hClose)
-                  (\h3 ->
-                    B8.hPutStrLn h3 $ B8.unlines gs)
-             return ()
-         )
-    return ()
 
 
-hToATVWB :: Setting -> Handle -> IO (Workbook, [ByteString])
-hToATVWB setting h =
-  fmap (allTargetWB setting) (B8.hGetContents h)
+fToATVWB :: Setting -> FilePath -> IO (Workbook, [ByteString])
+fToATVWB setting fp =
+  fmap (allTargetWB setting) (B8.readFile fp)
 
 fToSheet :: CutOff -> Setting -> Fun -> FilePath -> (ByteString,ByteString) -> IO ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
 fToSheet c s f fp p =
@@ -64,7 +40,7 @@ fToSheet c s f fp p =
 
 fToSheets :: CutOff -> Setting -> Fun -> FilePath -> [(ByteString,ByteString)] -> IO [Worksheet]
 fToSheets c s f fp =
-   fmap concat . mapM (fmap (uncurry (\a b -> [fst a,fst b])) . fToSheet c s f fp)
+   fmap concat . mapM (fmap (uncurry (\(a,_) (b,_) -> [a, b])) . fToSheet c s f fp)
    
 fToReport :: CutOff -> Setting -> Fun -> FilePath -> [(ByteString,ByteString)] -> IO Workbook
 fToReport c s f fp = 
@@ -77,7 +53,7 @@ fToGeneList c s f fp ps =
          let str = s1 `B8.append` " vs " `B8.append` s2
              upStr = str `B8.append` "_up"
              dnStr = str `B8.append` "_down"
-         in fmap (uncurry (\a b -> [(upStr,snd a),(dnStr,snd b)])) $
+         in fmap (uncurry (\(_,a) (_,b) -> [(upStr, a),(dnStr, b)])) $
             fToSheet c s f fp p) ps
 
 fToFCGeneList, fToVPGeneList :: CutOff -> Setting -> FilePath -> [(ByteString,ByteString)] -> IO [(ByteString,[ByteString])]

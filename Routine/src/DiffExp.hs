@@ -305,7 +305,7 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _) (head
                                          ,("g2End",5+2*(n1+n2))
                                          ] gFCAbsTemplate
                               g1RawStr = avgStr 4 (3 + n1)
-                              g2RawStr = avgStr (4+n1) (3+n1+n2)
+                              g2RawStr = avgStr (3+n1) (2+n1+n2)
                               g1NorStr = avgStr (2+n1+n2) (1+n1+n2+n1)                         
                               g2NorStr = avgStr (1+n1+n2+n1) (2*(n1+n2))                       
                           in (mkRow $

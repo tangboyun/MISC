@@ -76,7 +76,7 @@ groupStr :: Setting -> String
 groupStr (Setting _ rna spec _) =
   case rna of
     Coding -> commonStr
-    _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr]
+    _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr spec]
   where
     commonStr =
       "# Fold Change cut-off: $fcCutOff$\n\
@@ -101,7 +101,7 @@ sampleStr :: Setting -> String
 sampleStr (Setting _ rna spec _) =
   case rna of
     Coding -> commonStr
-    _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr]
+    _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr spec]
   where
     commonStr =
       "# Fold Change cut-off: $fc$\n\
@@ -117,18 +117,37 @@ sampleStr (Setting _ rna spec _) =
       \# Column H, I: Normalized intensity of each sample (log2 transformed).\n\
       \# Column $annBeg$ ~ $annEnd$: Annotations to each probe, including $annos$.\n"
 
-relationStr = 
-      "# Columns $relaBeg$ ~ $relaEnd$: the relationship of lncRNA and its nearby coding gene and the coordinate of the coding gene, \
-      \including relationship, Associated_gene_acc, Associated_gene_name, Associated_gene_strand, Associated_gene_start, Associated_gene_end.\n\
-      \"sense_exon_overlap\": the lncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
-      \"sense_intron_overlap\": the lncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
-      \"antisense_exon_overlap\": the lncRNA is transcribed from the antisense strand and overlapping with a coding transcript; \n\
-      \"antisense_intron_overlap\": the lncRNA is transcribed from the antisense strand without sharing overlapping exons;\n\
-      \"bidirection\": the lncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
-      \"intergenic\": there are no coding transcripts within 30 kb of the lncRNA;\n\
-      \"others\":  means those lncRNAs, within 30kb of which, there are non-overlapping coding transcripts transcribed from same strand; \
-      \or, there are non-overlapping coding transcripts transcribed tail to tail; \
-      \or there are non-overlapping coding transcripts transcribed head to head with their TSSs separated by more than 1 kb.\n"
+relationStr s = 
+  "# Columns $relaBeg$ ~ $relaEnd$: the relationship of lncRNA and its nearby coding gene and the coordinate of the coding gene, \
+  \including relationship, Associated_gene_acc, Associated_gene_name, Associated_gene_strand, Associated_gene_start, Associated_gene_end.\n" ++ 
+  relaSpecific s
+  where
+    relaSpecific s = case s of
+      Rat -> 
+        "\"sense_exon_overlap\": the lncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
+        \\"sense_intron_overlap\": the lncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
+        \\"antisense_exon_overlap\": the lncRNA is transcribed from the antisense strand and overlapping with a coding transcript; \n\
+        \\"antisense_intron_overlap\": the lncRNA is transcribed from the antisense strand without sharing overlapping exons;\n\
+        \\"bidirection\": the lncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
+        \\"intergenic\": there are no coding transcripts within 30 kb of the lncRNA;\n\
+        \\"others\":  means those lncRNAs, within 30kb of which, there are non-overlapping coding transcripts transcribed from same strand; \
+        \or, there are non-overlapping coding transcripts transcribed tail to tail; \
+        \or there are non-overlapping coding transcripts transcribed head to head with their TSSs separated by more than 1 kb.\n"
+      Mouse ->
+        "\"sense_overlapping\": the LncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
+        \\"intronic\": the lncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
+        \\"natural antisense\": the LncRNA is transcribed from the antisense strand and overlapping with a coding transcript;\n\
+        \\"non-overlapping antisense\": the LncRNA is transcribed from the antisense strand without sharing overlapping exons;\n\
+        \\"bidirectional\": the LncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
+        \\"intergenic\": there are no overlapping or bidirectional coding transcripts nearby the LncRNA.\n"
+      Human ->
+        "\"exon sense-overlapping\": the lncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
+        \\"intron sense-overlapping\": the lncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
+        \\"intronic antisense\": the LncRNA is overlapping the intron of a coding transcript on the antisense strand;\n\
+        \\"natural antisense\": the LncRNA is transcribed from the antisense strand and overlapping with a coding transcript;\n\
+        \\"bidirectional\": the LncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
+        \\"intergenic\": there are no overlapping or bidirectional coding transcripts nearby the LncRNA.\n"
+
 
 sourceStr s = 
   "Note: \n\
@@ -166,7 +185,7 @@ allTargetStr :: Setting -> String
 allTargetStr (Setting chip rna spec _) =
   case rna of
     Coding -> commonStr
-    _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr]
+    _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr spec]
   where commonStr =     
           "All Targets Value ($atHeadStr$)\n\
           \# Column A: ProbeName, it represents the probe name.\n\

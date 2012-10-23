@@ -77,7 +77,9 @@ sampleSheet :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
 sampleSheet (C f _) setting@(Setting chip rna _ sheet) (header,vecs) (s1,s2) =
   let rawIdxs = V.findIndices ("(raw)" `isSuffixOf`) header
       norIdxs = V.findIndices ("(normalized)" `isSuffixOf`) header
-      gsIdx = fromJust $ V.findIndex (== "GeneSymbol") header
+      gsIdx = case rna of
+                Coding -> fromJust $ V.elemIndex "GeneSymbol" header
+                _      -> fromJust $ V.elemIndex "SeqID" header   
       at = V.unsafeIndex
       rawIdxS1 = fromJust $ V.find ((== s1). extractS . (header `at`)) rawIdxs
       rawIdxS2 = fromJust $ V.find ((== s2). extractS . (header `at`)) rawIdxs
@@ -200,7 +202,9 @@ groupSheet :: CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
            -> (ByteString,ByteString) -> ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
 groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _ sheet) (header,vecs) (gs1,gs2) =
   let at = V.unsafeIndex
-      gsIdx = fromJust $ V.findIndex (== "GeneSymbol") header
+      gsIdx = case rna of
+                Coding -> fromJust $ V.elemIndex "GeneSymbol" header
+                _       -> fromJust $ V.elemIndex "SeqID" header   
       rawIdxs = V.findIndices (\e ->
                                 let g = extractG e
                                 in "(raw)" `isSuffixOf` e &&

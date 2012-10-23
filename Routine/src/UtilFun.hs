@@ -88,6 +88,7 @@ removeUnusedAnno (Setting c r _ _) rs@(h:rows) =
                               ,"EntrezGene"
                               ,"GO(Avadis)"
                               ,"TIGRID"
+                              ,"GeneSymbol"
                               ,"UniGene"
                               ]
               idxVec = V.fromList $ [0..snd (findNumPart h)] ++ V.toList aIdxs

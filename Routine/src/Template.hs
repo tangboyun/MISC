@@ -145,14 +145,14 @@ sourceStr s =
           \NRED: NRED (http://jsm-research.imb.uq.edu.au/nred/cgi-bin/ncrnadb.pl);\n\
           \UCR: \"ultra-conserved region\" among human, mouse and rat (http://users.soe.ucsc.edu/~jill/ultra.html);\n\
           \lincRNA: lincRNA identified by John Rinn's group (Guttman et al. 2009; Khalil et al. 2009);\n\
-          \misc_lncRNA: other sources."
+          \misc_LncRNA: other sources."
     humanSource = "H-invDB: H-invDB (http://www.h-invitational.jp/);\n"
     mouseSource = "Fantom: Fantom project (http://fantom.gsc.riken.jp/);\n"
     ratSource = "RefSeq_NR: RefSeq validated non-coding RNA;\n\
                 \RefSeq_XR: RefSeq un-validated non-coding RNA;\n\
-                \mouse_ortholog: rat lncRNAs which are obtained by sequence comparison with mouse LncRNAs;\n\
+                \mouse_ortholog: rat LncRNAs which are obtained by sequence comparison with mouse LncRNAs;\n\
                 \UCR: \"ultra-conserved region\" among human, mouse and rat (http://users.soe.ucsc.edu/~jill/ultra.html);\n\
-                \misc_lncRNA: other sources.\n"
+                \misc_LncRNA: other sources.\n"
 
 
 

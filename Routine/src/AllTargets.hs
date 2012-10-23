@@ -65,17 +65,28 @@ allTargetWB set@(Setting c r _ _) str =
                            V.toList $ V.slice annBeg (annEnd-annBeg+1) vec)
                     in mkRow cs 
                   ) $ tail ts'
+      attrs = let commonAttr = [("rawBeg",toStr rawBeg)
+                               ,("rawEnd",toStr rawEnd)
+                               ,("norBeg",toStr norBeg)
+                               ,("norEnd",toStr norEnd)
+                               ,("annBeg",toStr annBeg)
+                               ,("annEnd",toStr annEnd)
+                               ,("annos", B8.intercalate ", " $ V.toList $ V.drop annBeg header)
+                               ,("atHeadStr", B8.pack atHeadStr)
+                               ]
+              in case r of
+                Coding -> commonAttr
+                NonCoding ->
+                  let source = toStr $ fromJust $ V.elemIndex "source" header 
+                      relaBeg = toStr $ fromJust $ V.elemIndex "relationship" header
+                      relaEnd = toStr $ len -1
+                  in commonAttr ++ 
+                     [("source",source)
+                     ,("relaBeg",relaBeg)
+                     ,("relaEnd",relaEnd)]
       atNoteStr = B8.unpack $ render $
-                  setManyAttrib
-                  [("rawBeg",toStr rawBeg)
-                  ,("rawEnd",toStr rawEnd)
-                  ,("norBeg",toStr norBeg)
-                  ,("norEnd",toStr norEnd)
-                  ,("annBeg",toStr annBeg)
-                  ,("annEnd",toStr annEnd)
-                  ,("annos", B8.intercalate ", " $ V.toList $ V.drop annBeg header)
-                  ,("atHeadStr", B8.pack atHeadStr)
-                  ] $ allTargetTemplate set
+                  setManyAttrib attrs
+                  $ allTargetTemplate set
       len = V.length header
       idxLen = fromIntegral $ length (filter (== '\n') $ allTargetStr set) + 2
       atNoteCell = string atNoteStr

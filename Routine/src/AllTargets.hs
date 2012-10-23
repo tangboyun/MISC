@@ -125,7 +125,7 @@ allTargetWB set@(Setting c r _ _) str =
                    mkTable
                    (mkRow
                     [string str
-                     # mergeAcross 17 --
+                     # mergeAcross 15 --
                      # mergeDown idx 
                      # withStyleID "allHead"
                      # addTextPropertyAtRanges [(0, fromJust $ elemIndex '\n' str)]

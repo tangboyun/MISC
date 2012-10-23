@@ -118,15 +118,17 @@ sampleStr (Setting _ rna spec _) =
       \# Column $annBeg$ ~ $annEnd$: Annotations to each probe, including $annos$.\n"
 
 relationStr = 
-      "# Columns $relaBeg$ ~ $relaEnd$: the relationship of LncRNA and its nearby coding gene and the coordinate of the coding gene, \
-      \including relationship, Associated_gene_acc, Associated_gene_name, Associated_gene_strand, \
-      \Associated_gene_start, Associated_gene_end.\n\
-      \\"sense_overlapping\": the LncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
-      \\"intronic\": the LncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
-      \\"natural antisense\": the LncRNA is transcribed from the antisense strand and overlapping with a coding transcript; \n\
-      \\"non-overlapping antisense\": the LncRNA is transcribed from the antisense strand without sharing overlapping exons;\n\
-      \\"bidirectional\": the LncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
-      \\"intergenic\": there are no overlapping or bidirectional coding transcripts nearby the LncRNA."
+      "# Columns $relaBeg$ ~ $relaEnd$: the relationship of lncRNA and its nearby coding gene and the coordinate of the coding gene, \
+      \including relationship, Associated_gene_acc, Associated_gene_name, Associated_gene_strand, Associated_gene_start, Associated_gene_end.\n\
+      \"sense_exon_overlap\": the lncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
+      \"sense_intron_overlap\": the lncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
+      \"antisense_exon_overlap\": the lncRNA is transcribed from the antisense strand and overlapping with a coding transcript; \n\
+      \"antisense_intron_overlap\": the lncRNA is transcribed from the antisense strand without sharing overlapping exons;\n\
+      \"bidirection\": the lncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
+      \"intergenic\": there are no coding transcripts within 30 kb of the lncRNA;\n\
+      \"others\":  means those lncRNAs, within 30kb of which, there are non-overlapping coding transcripts transcribed from same strand; \
+      \or, there are non-overlapping coding transcripts transcribed tail to tail; \
+      \or there are non-overlapping coding transcripts transcribed head to head with their TSSs separated by more than 1 kb.\n"
 
 sourceStr s = 
   "Note: \n\

@@ -27,11 +27,14 @@ import           System.FilePath
 import           Text.Printf
 import           Text.XML.SpreadsheetML.Writer (showSpreadsheet)
 
+version = "0.1.0.1"
+
+versionStr = " " ++ "v" ++ version
 main :: IO ()
 main = do
   initGUI
   window <- windowNew
-  set window [windowTitle := "Expression Profiling Report Maker",
+  set window [windowTitle := "Expression Profiling Report Maker" ++ versionStr,
               windowDefaultWidth := 300, 
               containerBorderWidth := 30 ]
   refFC <- newIORef Nothing

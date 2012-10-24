@@ -69,16 +69,16 @@ fToVPReport c s fp ps =
        wb { workbookWorksheets = vpSheet : workbookWorksheets wb}) $
      fToReport c s groupSheet fp ps
 
-fToHybGeneList :: CutOff -> Setting -> FilePath -> (GroupPairs,SamplePairs) -> IO [(ByteString,[ByteString])]
-fToHybGeneList c s fp (G gs, S ss) =
-  (++) <$> fToVPGeneList c s fp gs
-       <*> fToFCGeneList c s fp ss
+fToHybGeneList :: (CutOff,CutOff) -> Setting -> FilePath -> (GroupPairs,SamplePairs) -> IO [(ByteString,[ByteString])]
+fToHybGeneList (cg,cs) s fp (G gs, S ss) =
+  (++) <$> fToVPGeneList cg s fp gs
+       <*> fToFCGeneList cs s fp ss
   
-fToHybReport :: CutOff -> Setting -> FilePath -> (GroupPairs,SamplePairs) -> IO Workbook
-fToHybReport c s fp (G gs, S ss) =
+fToHybReport :: (CutOff,CutOff) -> Setting -> FilePath -> (GroupPairs,SamplePairs) -> IO Workbook
+fToHybReport (cg,cs) s fp (G gs, S ss) =
   let vpSheet = volcanoPlotSheet c s
   in fmap
      (addStyles . mkWorkbook . (vpSheet :)) $
-     (++) <$> fToSheets c s groupSheet fp gs
-          <*> fToSheets c s sampleSheet fp ss
+     (++) <$> fToSheets cg s groupSheet fp gs
+          <*> fToSheets cs s sampleSheet fp ss
 

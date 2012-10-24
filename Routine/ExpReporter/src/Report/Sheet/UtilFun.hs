@@ -14,7 +14,6 @@
 module Report.Sheet.UtilFun where
 
 import           Control.Arrow ((&&&))
-import qualified Data.ByteString as S
 import           Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B8
 import           Data.Char
@@ -105,22 +104,14 @@ findNumPart = (V.minimum &&& V.maximum) .
                               "(raw)" `isSuffixOf` e ||
                               "(normalized)" `isSuffixOf` e
                             )
-findNumPart' = (V.minimum &&& V.maximum) .
-               V.findIndices (\e ->
-                               "(raw)" `isSuffixOf'` e ||
-                               "(normalized)" `isSuffixOf'` e
-                             )
 removeDQ str = if B8.head str == '"'
                then B8.tail $ B8.init str
                else str
 
 
 findRawPart = V.findIndices ("(raw)" `isSuffixOf`)
-findRawPart' = V.findIndices ("(raw)" `isSuffixOf'`)
 findNorPart = V.findIndices ("(normalized)" `isSuffixOf`)
-findNorPart' = V.findIndices ("(normalized)" `isSuffixOf'`)
 findAnnPart vec = V.fromList [(snd $ findNumPart vec) + 1..V.length vec - 1]
-findAnnPart' vec = V.fromList [(snd $ findNumPart' vec) + 1..V.length vec - 1]
 reorganize :: [V.Vector ByteString] -> [V.Vector ByteString]
 reorganize [] = []
 reorganize (h:rs) =
@@ -169,16 +160,10 @@ toStr i =
      then B8.cons' (ls !! (x-1)) $! B8.singleton $! ls !! y
      else B8.singleton $! ls !! i
           
-toStr' :: Int -> S.ByteString
-toStr' = B8.toStrict . toStr
 
 isSuffixOf :: ByteString -> ByteString -> Bool
 isSuffixOf = B8.isPrefixOf `on` B8.reverse
 
-isSuffixOf' :: S.ByteString -> S.ByteString -> Bool
-isSuffixOf' = isSuffixOf `on` B8.fromStrict
 
 extractG = B8.tail . head . tail . B8.split ',' . B8.takeWhile (/= ']') . B8.tail
-extractG' = B8.toStrict . extractG . B8.fromStrict
 extractS = head . B8.split ',' . B8.takeWhile (/= ']') . B8.tail
-extractS' = B8.toStrict . extractS . B8.fromStrict

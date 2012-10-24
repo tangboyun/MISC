@@ -12,26 +12,24 @@
 --
 -----------------------------------------------------------------------------
 
-module DiffExp where
+module Report.Sheet.DEGSheet where
 
 import           Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B8
-import           Data.Char
 import           Data.Colour.Names
-import           Data.List (partition,findIndex,elemIndex)
+import           Data.List (partition,elemIndex)
 import           Data.Maybe
 import qualified Data.Vector as V
-import           Styles
-import           Template
+import           Report.Sheet.Styles
+import           Report.Sheet.Template
+import           Report.Sheet.UtilFun
+import           Report.Types
+import           Statistics.Sample
 import           Text.Printf
 import           Text.StringTemplate
 import           Text.XML.SpreadsheetML.Builder
 import           Text.XML.SpreadsheetML.Types
 import           Text.XML.SpreadsheetML.Util
-import           Text.XML.SpreadsheetML.Writer (toElement)
-import           Types
-import           UtilFun
-import           Statistics.Sample
 
 type Fun = CutOff -> Setting -> (V.Vector ByteString,[V.Vector ByteString])
             -> (ByteString,ByteString) -> ((Worksheet,[ByteString]),(Worksheet,[ByteString]))

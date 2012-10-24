@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -11,16 +12,33 @@
 --
 -----------------------------------------------------------------------------
 
-module GUI where
+module Report.GUI.Layout where
 
-import Graphics.UI.Gtk hiding (Mouse)
-import Graphics.Rendering.Cairo
-import Data.IORef
-import Control.Applicative
-import Data.Maybe
-import Data.List
-import Types
-import Control.Monad
+import           Control.Applicative
+import           Control.Monad
+import qualified Data.ByteString.Lazy.Char8 as B8
+import           Data.IORef
+import           Data.List hiding (isSuffixOf)
+import qualified Data.Vector as V
+import           Graphics.UI.Gtk hiding (Mouse)
+import           Report.Sheet.UtilFun hiding (toStr)
+import           Report.Types
+
+extract mfp = 
+  case mfp of
+    Nothing -> return ([],[])
+    Just fp -> do 
+      ml <- fmap (find (B8.isPrefixOf "ProbeName") . B8.lines) $ B8.readFile fp
+      case ml of
+        Nothing -> return ([],[])
+        Just l  ->
+          let header = V.map removeDQ $ V.fromList $ B8.split '\t' l
+              norPart = V.toList $ V.unsafeBackpermute header $
+                        V.findIndices ("(normalized)" `isSuffixOf`) header
+              ss = sort $ map extractS norPart
+              gs = sort $ nub $ map extractG norPart
+          in return (gs,ss)
+  
 
 projectBox = do
   projectSetting <- vBoxNew False 10
@@ -115,7 +133,7 @@ chipBox = do
   return (cb,(refChipType,refProbe,refSp))
   
 
-inputBox = do
+inputBox  = do
   iBox <- hBoxNew False 10
   inPutLabel <- labelNew (Just "输入文件：")
   input <- fileChooserButtonNew
@@ -125,23 +143,28 @@ inputBox = do
   fileFilterAddPattern fsfilt "*.txt"
   fileFilterSetName fsfilt "All Targets Value (*.txt)"   
   fileChooserAddFilter input fsfilt           
-
+              
   boxPackStart iBox inPutLabel PackNatural 0
   boxPackStart iBox input PackGrow 0
-  return iBox
+  return (iBox,input)
 
 outputBox = do
   oBox <- hBoxNew False 10
   outPutLabel <- labelNew (Just "输出目录：")  
   outPut <- fileChooserButtonNew "选择输出目录"
             FileChooserActionSelectFolder
-          
+  -- onCurrentFolderChanged outPut $ do
+  --   mFolder <- fileChooserGetCurrentFolder outPut
+  --   case mFolder of
+  --     Nothing -> return ()
+  --     Just curFolder -> fileChooserSetCurrentFolder outPut curFolder >> return ()
+      
   boxPackStart oBox outPutLabel PackNatural 0
   boxPackStart oBox outPut PackGrow 0
-  return oBox
+  return (oBox,outPut)
 
 
-fcBox refFSet1 refFSet2 = do
+filterBox refFSet1 refFSet2 input = do
   fcBox <- hBoxNew True 10
   bFC <- buttonNewWithMnemonic "_Fold Change Filtering"
   fcAdj1 <- adjustmentNew 2.0  1.0 10.0  0.1  0.5 0
@@ -149,11 +172,13 @@ fcBox refFSet1 refFSet2 = do
   pAdj <- adjustmentNew  0.05 0    1.0 0.001 0.01 0
   bVF <- buttonNewWithMnemonic "_Volcano Plot Filtering"  
   onClicked bFC $ do
+    mfp <- fileChooserGetFilename input
+    (_,samples) <- extract mfp          
+    
     dia <- dialogNew
     set dia [windowTitle := "Fold Change Setting"
             ,windowDefaultWidth := 300 
             ,containerBorderWidth := 30 ]
-      
     dVBox <- dialogGetUpper dia
     cutOffBox <- hBoxNew False 10
 
@@ -161,7 +186,7 @@ fcBox refFSet1 refFSet2 = do
     tLabel <- labelNew (Just "Fold Change cut-off：")
     boxPackStart cutOffBox tLabel PackNatural 0
     boxPackStart cutOffBox fcCutOff PackGrow 0
-    (comBox,refSs) <- compareBox ["sample1","sample2"]
+    (comBox,refSs) <- compareBox $ map B8.unpack samples
     dialogAddButton dia stockApply  ResponseApply
     dialogAddButton dia stockCancel ResponseCancel    
     containerAdd dVBox cutOffBox
@@ -175,21 +200,20 @@ fcBox refFSet1 refFSet2 = do
         when (not $ null ss) $ do
           writeIORef refFSet1 (Just $ F (C fc Nothing) ss)
           buttonSetLabel bFC "设置完毕"
-          buttonSetUseStock bFC True
         when (null ss) $ do 
           writeIORef refFSet1 Nothing
           buttonSetLabel bFC "_Fold Change Filtering"
-          buttonSetUseUnderline bFC True
           
         widgetDestroy dia
       else widgetDestroy dia
 
   onClicked bVF $ do
+    mfp <- fileChooserGetFilename input
+    (groups,_) <- extract mfp
     dia <- dialogNew
     set dia [windowTitle := "Volcano Plot Setting"
             ,windowDefaultWidth := 300 
             ,containerBorderWidth := 30 ]
-      
     dVBox <- dialogGetUpper dia
     fcCutOffBox <- hBoxNew False 10
     pCutOffBox <- hBoxNew False 10    
@@ -204,7 +228,7 @@ fcBox refFSet1 refFSet2 = do
     boxPackStart pCutOffBox pLabel PackNatural 0
     boxPackStart pCutOffBox pCutOff PackGrow 0
     
-    (comBox,refGs) <- compareBox ["group1","group2"]
+    (comBox,refGs) <- compareBox $ map B8.unpack groups
     dialogAddButton dia stockApply  ResponseApply
     dialogAddButton dia stockCancel ResponseCancel    
     containerAdd dVBox fcCutOffBox
@@ -222,14 +246,12 @@ fcBox refFSet1 refFSet2 = do
           then do
             writeIORef refFSet2 Nothing
             buttonSetLabel bVF "_Volcano Plot Filtering"
-            buttonSetUseUnderline bVF True
             widgetDestroy dia            
           else do
           
             writeIORef refFSet2 $ Just $
               F (C fc (Just (Unpaired,p))) gs
             buttonSetLabel bVF "设置完毕"
-            buttonSetUseStock bVF True
               
             widgetDestroy dia
       else widgetDestroy dia
@@ -245,7 +267,7 @@ compareBox ls = do
   leftC <- createCBox ls
   rightC <- createCBox ls
   l <- labelNew (Just "vs")
-  add <- buttonNewWithMnemonic "_Add"
+  addB <- buttonNewWithMnemonic "_Add"
   clear <- buttonNewWithMnemonic "_Clear"
   scrWin <- scrolledWindowNew Nothing Nothing
   pairShow <- labelNew Nothing
@@ -253,10 +275,10 @@ compareBox ls = do
   tableAttachDefaults t leftC 0 1 0 1
   tableAttachDefaults t l 1 2 0 1
   tableAttachDefaults t rightC 2 3 0 1
-  tableAttachDefaults t add 3 4 0 1
+  tableAttachDefaults t addB 3 4 0 1
   tableAttachDefaults t clear 3 4 1 2
   tableAttachDefaults t scrWin 0 3 1 2
-  onClicked add $ do
+  onClicked addB $ do
     str1 <- comboBoxGetActiveText leftC
     str2 <- comboBoxGetActiveText rightC
     case (,) <$> str1 <*> str2 of

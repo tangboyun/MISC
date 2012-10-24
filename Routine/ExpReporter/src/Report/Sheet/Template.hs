@@ -10,12 +10,12 @@
 -- 
 --
 -----------------------------------------------------------------------------
-module Template where
+module Report.Sheet.Template where
 
-import Text.StringTemplate
-import Types
 import Data.List
+import Report.Types
 import Text.Printf
+import Text.StringTemplate
 
 vsRegex,log2Regex,cutOffRegex :: String
 vsRegex = "\\b\\w+ vs \\w+\\b"
@@ -120,9 +120,9 @@ sampleStr (Setting _ rna spec _) =
 relationStr s = 
   "# Columns $relaBeg$ ~ $relaEnd$: the relationship of lncRNA and its nearby coding gene and the coordinate of the coding gene, \
   \including relationship, Associated_gene_acc, Associated_gene_name, Associated_gene_strand, Associated_gene_start, Associated_gene_end.\n" ++ 
-  relaSpecific s
+  relaSpecific
   where
-    relaSpecific s = case s of
+    relaSpecific = case s of
       Rat -> 
         "\"sense_exon_overlap\": the lncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
         \\"sense_intron_overlap\": the lncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
@@ -151,13 +151,13 @@ relationStr s =
 
 sourceStr s = 
   "Note: \n\
-  \# Column $source$: source, the source of LncRNA is collected from.\n" ++ source s
+  \# Column $source$: source, the source of LncRNA is collected from.\n" ++ source
   where
-    source s = case s of
-      Human -> insert humanSource 
-      Mouse -> insert mouseSource 
+    source = case s of
+      Human -> insertStr humanSource 
+      Mouse -> insertStr mouseSource 
       _     -> ratSource 
-    insert c =
+    insertStr c =
           "RefSeq_NR: RefSeq validated non-coding RNA;\n\
           \UCSC_knowngene: UCSC known genes annotated as \"non-coding\", \"near-coding\" and \"antisense\" \
           \(http://genome.ucsc.edu/cgi-bin/hgTables/);\n\
@@ -182,7 +182,7 @@ allTargetTemplate :: Stringable a => Setting -> StringTemplate a
 allTargetTemplate = newSTMP . allTargetStr 
 
 allTargetStr :: Setting -> String
-allTargetStr (Setting chip rna spec _) =
+allTargetStr (Setting _ rna spec _) =
   case rna of
     Coding -> commonStr
     _      -> intercalate "\n\n" $ [commonStr, sourceStr spec, relationStr spec]

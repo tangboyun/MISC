@@ -10,10 +10,10 @@
 -- 
 --
 -----------------------------------------------------------------------------
-module Styles where
-import           Text.XML.SpreadsheetML.Types
-import           Text.XML.SpreadsheetML.Builder
-import           Data.Colour.Names
+module Report.Sheet.Styles where
+import Data.Colour.Names
+import Text.XML.SpreadsheetML.Builder
+import Text.XML.SpreadsheetML.Types
 
 defaultS = emptyStyle { fontName = Just "Times New Roman"
                       , fontFamily = Just "Roman"
@@ -37,7 +37,7 @@ allHeadStyle = defaultS
   , wrapText = Just True
   , fontSize = Just 10
   }
-  
+
 frCellStyle = title { bgColor = Just orange }
 riCellStyle = title { bgColor = Just cornflowerblue }
 niCellStyle = title { bgColor = Just lightgreen}

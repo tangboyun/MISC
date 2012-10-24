@@ -11,9 +11,9 @@
 --
 -----------------------------------------------------------------------------
 
-module Types where
+module Report.Types where
 
-import           Data.ByteString.Lazy.Char8 (ByteString)
+import Data.ByteString.Lazy.Char8 (ByteString)
 
 data CutOff = C
               !Double -- fold change

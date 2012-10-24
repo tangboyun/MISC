@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings,PatternGuards #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -11,11 +11,11 @@
 -- 
 --
 -----------------------------------------------------------------------------
-module UtilFun where
+module Report.Sheet.UtilFun where
 
 import           Control.Arrow ((&&&))
-import           Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString as S
+import           Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B8
 import           Data.Char
 import           Data.Function
@@ -24,31 +24,30 @@ import           Data.Maybe
 import           Data.Monoid
 import           Data.Ord
 import qualified Data.Vector as V
+import           Report.Types
+import           Statistics.Distribution
+import           Statistics.Distribution.StudentT
+import           Statistics.Sample
 import           Text.Regex.Posix
 import           Text.XML.SpreadsheetML.Builder
 import           Text.XML.SpreadsheetML.Types
-import           Types
-import           Statistics.Sample
-import           Statistics.Distribution
-import           Statistics.Distribution.StudentT
-import           Text.Regex.Posix
 
 ttestUnpaired,ttestPaired :: V.Vector Double -> V.Vector Double -> Double
 
-ttestUnpaired !v1 !v2 | V.length v1 > 1, V.length v2 > 1 =
+ttestUnpaired v1 v2 | V.length v1 > 1, V.length v2 > 1 =
   let (m1,var1) = meanVarianceUnb v1
       (m2,var2) = meanVarianceUnb v2
-      n1 = fromIntegral $! V.length v1
-      n2 = fromIntegral $! V.length v2
+      n1 = fromIntegral $ V.length v1
+      n2 = fromIntegral $ V.length v2
       df = n1 + n2 - 2
-      s_pooled = sqrt $! (var1 * (n1-1) + var2 * (n2-1)) / df
-      s = s_pooled * (sqrt $! 1 / n1 + 1 / n2) 
+      s_pooled = sqrt $ (var1 * (n1-1) + var2 * (n2-1)) / df
+      s = s_pooled * (sqrt $ 1 / n1 + 1 / n2) 
       t = (m1 - m2) / s
       dis = studentT df
   in 2 * cumulative dis (negate $! abs t)
                       | otherwise = error "Illformed unpaired t-test."
                                     
-ttestPaired !v1 !v2 | V.length v1 == V.length v2 =
+ttestPaired v1 v2 | V.length v1 == V.length v2 =
   let v = V.zipWith (-) v1 v2
       n = fromIntegral $ V.length v
       df = n - 1
@@ -131,11 +130,11 @@ reorganize (h:rs) =
                               comparing (extractG . (h `at`)) a b `mappend`
                               comparing (extractS . (h `at`)) a b
                             ) $ V.toList vec
-      !idxVec = V.fromList $ take (V.length h) $
-                [0..rawBeg-1] ++ organize (findRawPart h) ++
-                organize (findNorPart h) ++ [norEnd + 1..]
+      idxVec = V.fromList $ take (V.length h) $
+               [0..rawBeg-1] ++ organize (findRawPart h) ++
+               organize (findNorPart h) ++ [norEnd + 1..]
   in map (\e ->
-           let !e' = V.unsafeBackpermute e idxVec
+           let e' = V.unsafeBackpermute e idxVec
            in e'
          ) (h:rs)
       

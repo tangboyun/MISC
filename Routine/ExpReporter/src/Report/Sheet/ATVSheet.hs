@@ -12,7 +12,7 @@
 --
 -----------------------------------------------------------------------------
 
-module AllTargets where
+module Report.Sheet.ATVSheet where
 
 import           Control.Arrow ((&&&))
 import           Data.ByteString.Lazy.Char8 (ByteString)
@@ -21,15 +21,14 @@ import           Data.Colour.Names
 import           Data.List hiding (isSuffixOf)
 import           Data.Maybe
 import qualified Data.Vector as V
-import           Styles
-import           Template
+import           Report.Sheet.Styles
+import           Report.Sheet.Template
 import           Text.StringTemplate
 import           Text.XML.SpreadsheetML.Builder
 import           Text.XML.SpreadsheetML.Types
 import           Text.XML.SpreadsheetML.Util
-import           Text.XML.SpreadsheetML.Writer (toElement)
-import           Types
-import           UtilFun
+import           Report.Types
+import           Report.Sheet.UtilFun
 
 
 
@@ -55,7 +54,6 @@ allTargetWB set@(Setting c r _ _) str =
       (rawBeg,rawEnd) = f "(raw)" header
       (norBeg,norEnd) = f "(normalized)" header
       (annBeg,annEnd) = (norEnd + 1, len - 1)
-      hrow = map (string . B8.unpack) $ V.toList header
       rows = map (\vec -> 
                     let cs = 
                           [string $ B8.unpack $ vec `at` 0] ++
@@ -120,19 +118,19 @@ allTargetWB set@(Setting c r _ _) str =
                     ,idxLen + 6)
       table1 = mkTable $
                hs1 ++ zipWith (\idx row -> row # begAtIdx idx) [begIdx..] rows
-      table str = let idx = fromIntegral $ length (filter (== '\n') str) + 4
-                  in
-                   mkTable
-                   (mkRow
-                    [string str
-                     # mergeAcross 15 --
-                     # mergeDown idx 
-                     # withStyleID "allHead"
-                     # addTextPropertyAtRanges [(0, fromJust $ elemIndex '\n' str)]
-                                               [Bold, Text $ dfp {size = Just 12}]
-                    ] : zipWith (\i r -> r # begAtIdx i)
-                    [idx+2 ..] (replicate 100 emptyRow))
-                   # withStyleID "white"
+      table strS = let idx = fromIntegral $ length (filter (== '\n') strS) + 4
+                   in
+                    mkTable
+                    (mkRow
+                     [string strS
+                      # mergeAcross 15 --
+                      # mergeDown idx 
+                      # withStyleID "allHead"
+                      # addTextPropertyAtRanges [(0, fromJust $ elemIndex '\n' strS)]
+                                                [Bold, Text $ dfp {size = Just 12}]
+                     ] : zipWith (\i row -> row # begAtIdx i)
+                     [idx+2 ..] (replicate 100 emptyRow))
+                    # withStyleID "white"
       tables =
         zip ["All Targets Value"
             ,"Box Plot"
@@ -160,3 +158,5 @@ allTargetWB set@(Setting c r _ _) str =
       NonCoding -> (addS $ mkWorkbook $
                     map (\(n,t) -> mkWorksheet (Name $ n ++ " - LncRNAs") t) tables
                   ,infos)
+
+

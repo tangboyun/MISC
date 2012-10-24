@@ -12,21 +12,17 @@
 --
 -----------------------------------------------------------------------------
 
-module Wrapper where
+module Report.Sheet where
 
+import           Control.Applicative
+import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B8
-import Data.ByteString.Lazy (ByteString)
-import           Text.XML.SpreadsheetML.Writer
-import           Text.XML.SpreadsheetML.Types
+import           Report.Sheet.ATVSheet
+import           Report.Sheet.DEGSheet
+import           Report.Sheet.UtilFun
+import           Report.Types
 import           Text.XML.SpreadsheetML.Builder
-import AllTargets
-import DiffExp
-import UtilFun
-import System.IO
-import Types
-import Control.Arrow ((&&&))
-import Control.Applicative
-import Control.Exception
+import           Text.XML.SpreadsheetML.Types
 
 
 
@@ -76,7 +72,7 @@ fToHybGeneList (cg,cs) s fp (G gs, S ss) =
   
 fToHybReport :: (CutOff,CutOff) -> Setting -> FilePath -> (GroupPairs,SamplePairs) -> IO Workbook
 fToHybReport (cg,cs) s fp (G gs, S ss) =
-  let vpSheet = volcanoPlotSheet c s
+  let vpSheet = volcanoPlotSheet cg s
   in fmap
      (addStyles . mkWorkbook . (vpSheet :)) $
      (++) <$> fToSheets cg s groupSheet fp gs

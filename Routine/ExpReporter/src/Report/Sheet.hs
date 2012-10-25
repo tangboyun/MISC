@@ -138,7 +138,7 @@ mkDEGSpreadSheet s (fcS,vpS) inFile outPath = do
       writeFile (outPath </> degFile bool s) $ showSpreadsheet degWB
       B8.appendFile (outPath </> noteFile ) $ B8.pack cutOffStr
       degGs <- fun2 cutOff s inFile ps'
-      mkDEGListFiles outPath degGs
+      mkDEGListFiles s outPath degGs
     go2 (vpC@(C fc1 (Just (_,p))),fcC@(C fc2 _)) (fun1,fun2) (gs,ss) = do
       let f = map (\(a,b) -> (B8.pack a,B8.pack b))
           gs' = G $ f gs
@@ -150,7 +150,7 @@ mkDEGSpreadSheet s (fcS,vpS) inFile outPath = do
       writeFile (outPath </> degFile True s) $ showSpreadsheet degWB
       B8.appendFile (outPath </> noteFile ) $ B8.pack cutOffStr      
       degGs <- fun2 (vpC,fcC) s inFile (gs',ss')
-      mkDEGListFiles outPath degGs
+      mkDEGListFiles s outPath degGs
 
 mkATVSpreadSheet :: Setting -> FilePath -> FilePath -> IO ()
 mkATVSpreadSheet s inFile outPath = do
@@ -166,22 +166,33 @@ goFolder = "GO"
 pathwayFolder :: FilePath
 pathwayFolder = "Pathway"
 
-mkDEGListFiles :: FilePath -> [(B8.ByteString,[B8.ByteString])] -> IO ()
-mkDEGListFiles ofp ps =
+mkDEGListFiles :: Setting -> FilePath -> [(B8.ByteString,[B8.ByteString])] -> IO ()
+mkDEGListFiles s ofp ps =
   let goOut = ofp </> goFolder
       pathOut = ofp </> pathwayFolder
   in do
-    mkdir goOut >> mkdir pathOut
+    when (isCoding s) $
+      mkdir goOut >> mkdir pathOut
     forM_ ps $ \(str,gs) -> do
       let gs' = filter (not . B8.null) gs
-      B8.writeFile (goOut </> B8.unpack str <.> "txt") $
-        B8.unlines gs'
       B8.appendFile (ofp </> noteFile ) $
         str `B8.append` "\t" `B8.append`
         (B8.pack $ show $ length gs) `B8.append` "\n"
-      if ("_up" `isSuffixOf` str) 
-        then B8.writeFile (pathOut </> B8.unpack str <.> "txt") $
-             B8.unlines $ map (`B8.append` "\torange") gs'
-        else B8.writeFile (pathOut </> B8.unpack str <.> "txt") $
-             B8.unlines $ map (`B8.append` "\tyellow") gs'
-
+      when (isCoding s) $ do
+        B8.writeFile (goOut </> B8.unpack str <.> "txt") $
+          B8.unlines gs'
+        if ("_up" `isSuffixOf` str) 
+          then B8.writeFile (pathOut </> B8.unpack str <.> "txt") $
+               B8.unlines $ map (`B8.append` "\torange") gs'
+          else B8.writeFile (pathOut </> B8.unpack str <.> "txt") $
+               B8.unlines $ map (`B8.append` "\tyellow") gs'
+             
+isCoding :: Setting -> True
+isCoding (Setting chip rna _ _) =
+  case chip of
+    GE -> True
+    _  ->
+      case rna of
+        Coding -> True
+        _      -> False
+    

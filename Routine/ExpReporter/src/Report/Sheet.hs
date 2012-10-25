@@ -133,7 +133,7 @@ mkDEGSpreadSheet s (fcS,vpS) inFile outPath = do
           cutOffStr = case cutOff of
             C fc Nothing -> "\n\nFold Change cut-off: " ++ printf "%.2f" fc ++ "\n"
             C fc (Just (_,p)) -> "\n\nFold Change cut-off: " ++ printf "%.1f" fc ++ "\n" ++
-                                "P-value cut-off: " ++ printf "%.1f" p ++ "\n"
+                                "P-value cut-off: " ++ printf "%.2f" p ++ "\n"
       degWB <- fun1 cutOff s inFile ps'
       writeFile (outPath </> degFile bool s) $ showSpreadsheet degWB
       appendFile (outPath </> noteFile ) cutOffStr
@@ -145,7 +145,7 @@ mkDEGSpreadSheet s (fcS,vpS) inFile outPath = do
           ss' = S $ f ss
           cutOffStr = "\n\nFold Change cut-off(Sample vs Sample): " ++ printf "%.2f" fc2 ++ "\n" ++
                       "Fold Change cut-off(Group vs Group): " ++ printf "%.1f" fc1 ++ "\n" ++
-                      "P-value cut-off: " ++ printf "%.1f" p ++ "\n"          
+                      "P-value cut-off: " ++ printf "%.2f" p ++ "\n"          
       degWB <- fun1 (vpC,fcC) s inFile (gs',ss')
       writeFile (outPath </> degFile True s) $ showSpreadsheet degWB
       appendFile (outPath </> noteFile ) cutOffStr      

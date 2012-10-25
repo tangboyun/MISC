@@ -18,8 +18,8 @@ import Text.Printf
 import Text.StringTemplate
 
 vsRegex,log2Regex,cutOffRegex :: String
-vsRegex = "[^[:punct:]]+ vs [[:print:]]+"
-log2Regex = "[^[:alnum:]][Ll]og2 "
+vsRegex = "[^:]+ vs [[:print:]]+"
+log2Regex = "[Ll]og2 "
 cutOffRegex = "[[:space:]][[:digit:]]\\.[[:digit:]]{1,2}[[:space:]]"
 
 

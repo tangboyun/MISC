@@ -157,7 +157,7 @@ mkATVSpreadSheet s inFile outPath = do
   (atvWB,_) <- fToATVWB s inFile
   writeFile (outPath </> atvFile s) $ showSpreadsheet atvWB
   (_,infos) <- fToATVWB s inFile
-  B8.appendFile (outPath </> noteFile ) $ B8.unlines infos
+  appendFile (outPath </> noteFile ) $ unlines $ map B8.unpack infos
 
 
 goFolder :: FilePath
@@ -175,17 +175,17 @@ mkDEGListFiles s ofp ps =
       mkdir goOut >> mkdir pathOut
     forM_ ps $ \(str,gs) -> do
       let gs' = filter (not . B8.null) gs
-      B8.appendFile (ofp </> noteFile ) $
+      appendFile (ofp </> noteFile ) $ B8.unpack $
         str `B8.append` "\t" `B8.append`
         (B8.pack $ show $ length gs) `B8.append` "\n"
       when (isCoding s) $ do
-        B8.writeFile (goOut </> B8.unpack str <.> "txt") $
-          B8.unlines gs'
+        writeFile (goOut </> B8.unpack str <.> "txt") $
+          unlines $ map B8.unpack gs'
         if ("_up" `isSuffixOf` str) 
-          then B8.writeFile (pathOut </> B8.unpack str <.> "txt") $
-               B8.unlines $ map (`B8.append` "\torange") gs'
-          else B8.writeFile (pathOut </> B8.unpack str <.> "txt") $
-               B8.unlines $ map (`B8.append` "\tyellow") gs'
+          then writeFile (pathOut </> B8.unpack str <.> "txt") $
+               unlines $ map (B8.unpack . (`B8.append` "\torange")) gs'
+          else writeFile (pathOut </> B8.unpack str <.> "txt") $
+               unlines $ map (B8.unpack . (`B8.append` "\tyellow")) gs'
              
 isCoding :: Setting -> Bool
 isCoding (Setting chip rna _ _) =

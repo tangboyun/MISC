@@ -18,9 +18,9 @@ import Text.Printf
 import Text.StringTemplate
 
 vsRegex,log2Regex,cutOffRegex :: String
-vsRegex = "\\b\\w+ vs \\w+\\b"
-log2Regex = "\\b[Ll]og2\\b"
-cutOffRegex = "\\s[0-9]\\.[0-9]{1,2}\\b"
+vsRegex = "[[:print:]]+ vs [[:print:]]+"
+log2Regex = "[^[:alnum:]][Ll]og2 "
+cutOffRegex = "[^[:alnum:]][0-9]\\.[0-9]{1,2}[^[:alnum:]]"
 
 
 fcFormula, afcFormula, lfcFormula :: String

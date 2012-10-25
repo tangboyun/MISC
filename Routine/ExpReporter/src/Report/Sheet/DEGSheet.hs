@@ -137,7 +137,7 @@ sampleSheet (C f _) setting@(Setting chip rna _ sheet) (header,vecs) (s1,s2) =
                                            [("source",source)
                                            ,("relaBeg",relaBeg)
                                            ,("relaEnd",relaEnd)]
-                           noteStr = B8.unpack $ render $
+                           noteStr = render $
                                      setManyAttrib attrs $
                                      sampleTemplate setting
                            noteCell = string noteStr
@@ -334,7 +334,7 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _ sheet)
                                            [("source",source)
                                            ,("relaBeg",relaBeg)
                                            ,("relaEnd",relaEnd)]
-                           noteStr = B8.unpack $ render $
+                           noteStr = render $
                                      setManyAttrib attrs $
                                      groupTemplate setting
                            noteCell = string noteStr

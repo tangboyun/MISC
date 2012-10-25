@@ -82,7 +82,7 @@ allTargetWB set@(Setting c r _ _) str =
                      [("source",source)
                      ,("relaBeg",relaBeg)
                      ,("relaEnd",relaEnd)]
-      atNoteStr = B8.unpack $ render $
+      atNoteStr = render $
                   setManyAttrib attrs
                   $ allTargetTemplate set
       len = V.length header

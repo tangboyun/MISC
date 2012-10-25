@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                ExpReporter
-version:             0.1.0.1
+version:             0.1.0.3
 -- synopsis:            
 -- description:         
 license:             BSD3
@@ -30,4 +30,8 @@ executable ExpReporter
                        filepath,
                        statistics,
                        gtk
-  ghc-options:       -Wall -fno-warn-missing-signatures -fno-warn-incomplete-patterns -fno-warn-unused-do-bind
+
+  if os(windows)
+      ghc-options:       -Wall -fno-warn-missing-signatures -fno-warn-incomplete-patterns -fno-warn-unused-do-bind -optl-mwindows
+  else    
+      ghc-options:       -Wall -fno-warn-missing-signatures -fno-warn-incomplete-patterns -fno-warn-unused-do-bind

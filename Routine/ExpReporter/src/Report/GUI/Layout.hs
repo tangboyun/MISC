@@ -23,6 +23,53 @@ import qualified Data.Vector as V
 import           Graphics.UI.Gtk hiding (Mouse)
 import           Report.Sheet.UtilFun hiding (toStr)
 import           Report.Types
+import           Report.Sheet
+
+mkGUI = do
+  window <- windowNew
+  refFC <- newIORef Nothing
+  refVP <- newIORef Nothing
+  topVBox <- vBoxNew False 20
+--  pBox <- projectBox
+  (cBox,(refChip,refProbe,refSp)) <- chipBox
+  (iBox,iChooser) <- inputBox
+  (oBox,oChooser) <- outputBox
+  
+  aBox <- hBoxNew False 0
+  rB <- buttonNewFromStock stockApply
+  boxPackStart aBox rB PackRepel 0
+  refSs <- newIORef []  
+  refGs <- newIORef []
+  tBox <- filterBox refFC refVP (refSs,refGs) iChooser
+  sep <- hSeparatorNew
+  containerAdd window topVBox
+--  containerAdd topVBox pBox
+  containerAdd topVBox cBox
+  containerAdd topVBox iBox
+  containerAdd topVBox oBox
+  containerAdd topVBox tBox  
+  containerAdd topVBox sep
+  containerAdd topVBox aBox
+
+  onClicked rB $ do
+    fcSetting <- readIORef refFC
+    vpSetting <- readIORef refVP
+    chip <- readIORef refChip
+    rna <- readIORef refProbe
+    sp <- readIORef refSp
+    minFile <- fileChooserGetFilename iChooser
+    moutPath <- fileChooserGetFilename oChooser
+    let setting = Setting chip rna sp Numeric
+    case minFile of
+      Nothing -> return ()
+      Just inFile -> case moutPath of
+        Nothing -> return ()
+        Just outPath -> do
+          mkATVSpreadSheet setting inFile outPath
+          mkDEGSpreadSheet setting (fcSetting,vpSetting) inFile outPath
+          
+  return window
+  
 
 extract mfp = 
   case mfp of
@@ -153,18 +200,13 @@ outputBox = do
   outPutLabel <- labelNew (Just "输出目录：")  
   outPut <- fileChooserButtonNew "选择输出目录"
             FileChooserActionSelectFolder
-  -- onCurrentFolderChanged outPut $ do
-  --   mFolder <- fileChooserGetCurrentFolder outPut
-  --   case mFolder of
-  --     Nothing -> return ()
-  --     Just curFolder -> fileChooserSetCurrentFolder outPut curFolder >> return ()
       
   boxPackStart oBox outPutLabel PackNatural 0
   boxPackStart oBox outPut PackGrow 0
   return (oBox,outPut)
 
 
-filterBox refFSet1 refFSet2 input = do
+filterBox refFSet1 refFSet2 (refSs,refGs) input = do
   fcBox <- hBoxNew True 10
   bFC <- buttonNewWithMnemonic "_Fold Change Filtering"
   fcAdj1 <- adjustmentNew 2.0  1.0 10.0  0.1  0.5 0
@@ -186,7 +228,7 @@ filterBox refFSet1 refFSet2 input = do
     tLabel <- labelNew (Just "Fold Change cut-off：")
     boxPackStart cutOffBox tLabel PackNatural 0
     boxPackStart cutOffBox fcCutOff PackGrow 0
-    (comBox,refSs) <- compareBox $ map B8.unpack samples
+    comBox <- compareBox (map B8.unpack samples) refSs
     dialogAddButton dia stockApply  ResponseApply
     dialogAddButton dia stockCancel ResponseCancel    
     containerAdd dVBox cutOffBox
@@ -228,7 +270,7 @@ filterBox refFSet1 refFSet2 input = do
     boxPackStart pCutOffBox pLabel PackNatural 0
     boxPackStart pCutOffBox pCutOff PackGrow 0
     
-    (comBox,refGs) <- compareBox $ map B8.unpack groups
+    comBox <- compareBox (map B8.unpack groups) refGs
     dialogAddButton dia stockApply  ResponseApply
     dialogAddButton dia stockCancel ResponseCancel    
     containerAdd dVBox fcCutOffBox
@@ -261,8 +303,7 @@ filterBox refFSet1 refFSet2 input = do
   containerAdd fcBox bVF
   return fcBox
 
-compareBox ls = do
-  refPs <- newIORef []
+compareBox ls refPs = do
   t <- tableNew 2 4 False
   leftC <- createCBox ls
   rightC <- createCBox ls
@@ -278,6 +319,7 @@ compareBox ls = do
   tableAttachDefaults t addB 3 4 0 1
   tableAttachDefaults t clear 3 4 1 2
   tableAttachDefaults t scrWin 0 3 1 2
+  
   onClicked addB $ do
     str1 <- comboBoxGetActiveText leftC
     str2 <- comboBoxGetActiveText rightC
@@ -293,7 +335,7 @@ compareBox ls = do
   onClicked clear $ do
     writeIORef refPs []
     labelSetText pairShow ""
-  return (t,refPs)
+  return t
 
 createCBox :: [String] -> IO ComboBox
 createCBox ss = do

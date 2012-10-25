@@ -28,11 +28,11 @@ import           Text.XML.SpreadsheetML.Types
 
 fToATVWB :: Setting -> FilePath -> IO (Workbook, [ByteString])
 fToATVWB setting fp =
-  fmap (allTargetWB setting) (B8.readFile fp)
+  fmap (allTargetWB setting) (readFile' fp)
 
 fToSheet :: CutOff -> Setting -> Fun -> FilePath -> (ByteString,ByteString) -> IO ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
 fToSheet c s f fp p =
-  fmap (flip (f c s) p . preprocess s . parseTSV s) (B8.readFile fp)
+  fmap (flip (f c s) p . preprocess s . parseTSV s) (readFile' fp)
 
 fToSheets :: CutOff -> Setting -> Fun -> FilePath -> [(ByteString,ByteString)] -> IO [Worksheet]
 fToSheets c s f fp =
@@ -78,3 +78,4 @@ fToHybReport (cg,cs) s fp (G gs, S ss) =
      (++) <$> fToSheets cg s groupSheet fp gs
           <*> fToSheets cs s sampleSheet fp ss
 
+readFile' = fmap (B8.filter (/= '\r')) . B8.readFile 

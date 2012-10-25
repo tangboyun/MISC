@@ -38,9 +38,9 @@ mkGUI = do
   aBox <- hBoxNew False 0
   rB <- buttonNewFromStock stockApply
   boxPackStart aBox rB PackRepel 0
-  refSs <- newIORef []  
-  refGs <- newIORef []
-  tBox <- filterBox refFC refVP (refSs,refGs) iChooser
+  refPs1 <- newIORef []  
+  refPs2 <- newIORef []
+  tBox <- filterBox refFC refVP (refPs1,refPs2) iChooser
   sep <- hSeparatorNew
   containerAdd window topVBox
 --  containerAdd topVBox pBox
@@ -311,7 +311,10 @@ compareBox ls refPs = do
   addB <- buttonNewWithMnemonic "_Add"
   clear <- buttonNewWithMnemonic "_Clear"
   scrWin <- scrolledWindowNew Nothing Nothing
-  pairShow <- labelNew Nothing
+  pairs <- readIORef refPs
+  pairShow <- labelNew $ if null pairs
+                         then Nothing
+                         else Just $ toStr pairs
   scrolledWindowAddWithViewport scrWin pairShow
   tableAttachDefaults t leftC 0 1 0 1
   tableAttachDefaults t l 1 2 0 1

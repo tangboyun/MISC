@@ -136,7 +136,7 @@ mkDEGSpreadSheet s (fcS,vpS) inFile outPath = do
                                 "P-value cut-off: " ++ printf "%.1f" p ++ "\n"
       degWB <- fun1 cutOff s inFile ps'
       writeFile (outPath </> degFile bool s) $ showSpreadsheet degWB
-      B8.appendFile (outPath </> noteFile ) $ B8.pack cutOffStr
+      appendFile (outPath </> noteFile ) cutOffStr
       degGs <- fun2 cutOff s inFile ps'
       mkDEGListFiles s outPath degGs
     go2 (vpC@(C fc1 (Just (_,p))),fcC@(C fc2 _)) (fun1,fun2) (gs,ss) = do
@@ -148,7 +148,7 @@ mkDEGSpreadSheet s (fcS,vpS) inFile outPath = do
                       "P-value cut-off: " ++ printf "%.1f" p ++ "\n"          
       degWB <- fun1 (vpC,fcC) s inFile (gs',ss')
       writeFile (outPath </> degFile True s) $ showSpreadsheet degWB
-      B8.appendFile (outPath </> noteFile ) $ B8.pack cutOffStr      
+      appendFile (outPath </> noteFile ) cutOffStr      
       degGs <- fun2 (vpC,fcC) s inFile (gs',ss')
       mkDEGListFiles s outPath degGs
 

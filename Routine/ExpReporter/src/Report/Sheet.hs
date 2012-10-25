@@ -187,7 +187,7 @@ mkDEGListFiles s ofp ps =
           else B8.writeFile (pathOut </> B8.unpack str <.> "txt") $
                B8.unlines $ map (`B8.append` "\tyellow") gs'
              
-isCoding :: Setting -> True
+isCoding :: Setting -> Bool
 isCoding (Setting chip rna _ _) =
   case chip of
     GE -> True

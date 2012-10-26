@@ -1,0 +1,72 @@
+#+TITLE: 基因表达报表生成器使用说明
+#+AUTHOR: Boyun Tang
+#+EMAIL: tangboyun@hotmail.com
+#+DATE:  %B %e, %Y
+#+LaTex_CLASS: cn-article
+#+LaTeX_CLASS_OPTIONS:
+#+LATEX_HEADER:
+#+LaTeX_HEADER: 
+#+KEYWORDS: 
+#+DESCRIPTION: 
+#+STARTUP: content
+#+STARTUP: inlineimages
+#+OPTIONS: H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+
+* Version 0.1.0.9
+  差异表达报告生成过程中添加了移除Flag\_Call的预处理过程。
+  目前 _国外报表_ 的All Targets Value中，需要手动修改Flag项表头和注释。差异报表则能完美生成。
+* Version 0.1.0.8
+  修正note.txt的p-value输出精度。(1位小数 -> 2位小数)
+* Version 0.1.0.7
+  基本实现各类 _国内_ 表达谱和LncRNA芯片(人，大鼠，小鼠)的All Targets Value与常用差异基因筛选相关报表(Fold Change和非配对t-检验)的自动生成功能。使用者只需将生成的xml文件另存成
+  xls即可，各表单相应的表头自动索引，无需手动操作。并可自动生成相应的note备注、Go和Pathway分析的基因列表。
+
+* TODO List
+  1. 添加配对t-test报表支持。
+  2. LncRNA自动追加注释功能。
+  3. 添加国外单子的支持。
+  4. 添加其他类型芯片如miRNA报表的自动生成支持。
+  5. 在外部自动生成各类Plot，而无须再手动裁切GeneSpring的Plot.
+
+* 使用方法
+[[./demo.png]]
+  1. 从GeneSpring中导出相关实验Flag Call过滤后所有样本的All Targets Value.txt文件。
+     有组名的请添加Sample-Group Interpretation后导出。
+     LncRNA先导出再添加注释后作为输入(以后版本考虑支持自动添加)。
+  2. 运行程序，按顺序填写相关参数设置。使用下拉菜单与add添加比较对。
+  3. 点击apply后，耐心等待。
+  4. 在输出目录中找到xml文件，用Excel打开后另存为xls，并插入GeneSpring的各类Plot(以后版本考虑自动生成)。
+[[./output.png]]
+
+
+* 安装与编译
+[[./hp.png]]
+
+  初次安装时，需要依次安装haskel-platform与gtk。
+  1. 双击HaskellPlatform-2012.2.0.0-setup.exe，一路next到底。
+  2. 按照下面步骤安装gtk。
+
+** GTK安装
+[[./env.png]]
+
+  1. 解压gtk+-bundle\_2.24.10-20120208\_win32.zip。
+  2. 将所有解压出的文件，拷贝入 =C:\gtk= 文件夹中。
+  3. 将gtkrc文件(无后缀名)拷贝入 =C:\gtk\etc\gtk-2.0= 文件夹中。
+  4. 修改PATH环境变量(我的电脑 -> 右键 -> 属性 -> 高级 -> 环境变量)，在其中加入 =C:\gtk\bin= 。(';'为分隔符)。
+
+** 编译
+  1. 进入命令行界面(开始 -> 运行 -> =cmd= )。   
+  2. 输入: =C:\>cabal update && cabal install gtk2hs-buildtools=
+  3. D盘下创建temp文件夹，解压并拷贝SpreadsheetML和ExpReporter到该文件夹内。
+  4. 进入SpreadsheetML文件夹: =C:\>D: && cd temp\SpreadsheetML=
+  5. 输入: =D:\temp\SpreadsheetML>cabal install=
+  6. 进入ExpReporter文件夹: =D:\temp\SpreadsheetML\>cd .. && cd ExpReporter=
+  7. 输入: =D:\temp\ExpReporter>cabal install=
+  8. 耐心等待编译完成。
+  9. 默认安装路径为: =C:\Documents and Settings\你的账户\Application Data\cabal\bin=
+  10. 进入上述文件夹，右键ExpReporter.exe创建快捷方式。把快捷方式拖到桌面。
+  11. 双击快捷方式即可调出图形界面进行操作。
+
+* Bug提交与改进建议
+  包括常见的程序错误以及任何需要手动修改表头或者注释之类的都可视为bug。请联系汤波云， =msn: tangboyun@hotmail.com= 。

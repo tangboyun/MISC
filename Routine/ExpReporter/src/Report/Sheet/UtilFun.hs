@@ -58,18 +58,24 @@ ttestPaired v1 v2 | V.length v1 == V.length v2 =
 
 preprocess :: Setting -> (V.Vector ByteString,[V.Vector ByteString]) -> (V.Vector ByteString,[V.Vector ByteString])
 preprocess setting (h,vecs) =
-  let (header:vs) = removeUnusedAnno setting $ 
+  let (header:vs) = removeFlagCall $ removeUnusedAnno setting $ 
                     reorganize $ -- 保证样品与组是连续排列的
                     V.map removeDQ h: vecs
   in (header,vs)
 
+removeFlagCall :: [V.Vector ByteString] -> [V.Vector ByteString]
+removeFlagCall [] = []
+removeFlagCall rs@(h:_) =
+  let noneFlagIdxs = V.findIndices (not . (":Flag_Call" `isSuffixOf`)) h
+  in map (flip V.unsafeBackpermute noneFlagIdxs) rs
+  
 
 removeUnusedAnno :: Setting -> [V.Vector ByteString] -> [V.Vector ByteString]
 removeUnusedAnno _ [] = []
 removeUnusedAnno (Setting c r _ _) rs@(h:rows) =
   case c of
     GE -> 
-      case V.findIndex (=~ B8.pack "\\s*[Cc]ontrol.*[Tt]ype\\s*") h of
+      case V.findIndex (=~ B8.pack "[Cc]ontrol.*[Tt]ype") h of
         Nothing -> rs
         Just i  -> map (V.ifilter (\idx _ -> idx /= i)) $
                    h : filter (\vec -> vec `V.unsafeIndex` i == "false" ) rows

@@ -72,7 +72,7 @@ removeFlagCall rs@(h:_) =
 
 removeUnusedAnno :: Setting -> [V.Vector ByteString] -> [V.Vector ByteString]
 removeUnusedAnno _ [] = []
-removeUnusedAnno (Setting c r _ _) rs@(h:rows) =
+removeUnusedAnno (Setting c r spec _) rs@(h:rows) =
   case c of
     GE -> 
       case V.findIndex (=~ B8.pack "[Cc]ontrol.*[Tt]ype") h of
@@ -86,17 +86,36 @@ removeUnusedAnno (Setting c r _ _) rs@(h:rows) =
               aIdxs = V.unsafeBackpermute as $
                       V.findIndices (`notElem` lncRemoveList) $
                       V.unsafeBackpermute h as
-              lncRemoveList = ["Cytoband"
-                              ,"Description"
-                              ,"EnsemblID"
-                              ,"EntrezGene"
-                              ,"GO(Avadis)"
-                              ,"TIGRID"
-                              ,"GeneSymbol"
-                              ,"UniGene"
-                              ]
+              ratSpecific = ["GeneSymbol"]
+              typeIdx = fromJust $ V.elemIndex "type" h 
+              ls = [
+                    -- Rat
+                    "Cytoband"
+                   ,"Description"
+                   ,"EnsemblID"
+                   ,"EntrezGene"
+                   ,"GO(Avadis)" 
+                   ,"TIGRID"
+                   ,"UniGene"
+                    -- Mouse
+                   ,"GO" 
+                   ,"ProteinAccession"
+                   ,"UniProt"
+                   ,"product"
+                    -- Human
+                   ,"EntrezID"
+                   ,"unigene"
+                   ]
+              lncRemoveList =
+                case spec of
+                  Rat -> ls ++ ratSpecific
+                  _   -> ls
               idxVec = V.fromList $ [0..snd (findNumPart h)] ++ V.toList aIdxs
-          in map (flip V.unsafeBackpermute idxVec) rs
+          in map (flip V.unsafeBackpermute idxVec) $
+             h : filter (\vec ->
+                          let tp = vec `V.unsafeIndex` typeIdx
+                          in tp == "coding" || tp == "noncoding"
+                        ) rows
         _ -> rs  
       
     

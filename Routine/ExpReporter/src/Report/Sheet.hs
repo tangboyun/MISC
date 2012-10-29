@@ -37,7 +37,7 @@ fToATVWB setting fp =
 
 fToSheet :: CutOff -> Setting -> Fun -> FilePath -> (ByteString,ByteString) -> IO ((Worksheet,[ByteString]),(Worksheet,[ByteString]))
 fToSheet c s f fp p =
-  fmap (flip (f c s) p . preprocess s . parseTSV s) (readFile' fp)
+  fmap (flip (f c s) p . preprocess s . parseTSV) (readFile' fp)
 
 fToSheets :: CutOff -> Setting -> Fun -> FilePath -> [(ByteString,ByteString)] -> IO [Worksheet]
 fToSheets c s f fp =

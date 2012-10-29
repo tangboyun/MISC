@@ -13,6 +13,11 @@
 #+OPTIONS: H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
 #+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 
+* Version 0.1.0.11
+  修正parseTSV中的过滤项。
+* Version 0.1.0.10
+  检测大鼠lncRNA相应报告的输出注释，发现GeneSymbol项则移除之。
+  另添加lncRNA报告种属特异的输入注释项过滤。
 * Version 0.1.0.9
   差异表达报告生成过程中添加了移除Flag\_Call的预处理过程。
   目前 _国外报表_ 的All Targets Value中，需要手动修改Flag项表头和注释。差异报表则能完美生成。

@@ -147,7 +147,7 @@ mkDEGSpreadSheet s (fcS,vpS) inFile outPath = do
                       "Fold Change cut-off(Group vs Group): " ++ printf "%.1f" fc1 ++ "\n" ++
                       "P-value cut-off: " ++ printf "%.2f" p ++ "\n"          
       degWB <- fun1 (vpC,fcC) s inFile (gs',ss')
-      writeFile (outPath </> degFile True s) $ showSpreadsheet degWB
+      writeFile (outPath </> degFile False s) $ showSpreadsheet degWB
       appendFile (outPath </> noteFile ) cutOffStr      
       degGs <- fun2 (vpC,fcC) s inFile (gs',ss')
       mkDEGListFiles s outPath degGs

@@ -78,7 +78,7 @@ removeUnusedAnno (Setting c r spec _) rs@(h:rows) =
       case V.findIndex (=~ B8.pack "[Cc]ontrol.*[Tt]ype") h of
         Nothing -> rs
         Just i  -> map (V.ifilter (\idx _ -> idx /= i)) $
-                   h : filter (\vec -> vec `V.unsafeIndex` i == "false" ) rows
+                   h : filter (\vec -> (map toLower $ B8.unpack $ vec `V.unsafeIndex` i) == "false" ) rows
     _ ->
       case r of
         NonCoding ->

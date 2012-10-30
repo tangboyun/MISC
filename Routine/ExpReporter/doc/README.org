@@ -14,6 +14,10 @@
 #+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 
 * 版本说明
+** Version 0.1.0.13
+   过滤时，无视ControlType项的大小写。
+** Version 0.1.0.12
+   同时需要Fold Change和Volcano Plot Filtering的差异报告，去掉后缀(Pass Volcano Plot)。
 ** Version 0.1.0.11
   修正parseTSV中的过滤项。使之不再过滤LncRNA的差异报表。
 ** Version 0.1.0.10

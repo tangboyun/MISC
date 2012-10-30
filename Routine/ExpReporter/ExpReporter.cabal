@@ -1,5 +1,5 @@
 name:                ExpReporter
-version:             0.1.0.12
+version:             0.1.0.13
 synopsis:            Expression Profiling Reporter
 description:         Convert the .txt file exported by GeneSpring into an Excel Report.
 license:             BSD3

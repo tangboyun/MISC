@@ -134,10 +134,8 @@ relationStr s =
         \or, there are non-overlapping coding transcripts transcribed tail to tail; \
         \or there are non-overlapping coding transcripts transcribed head to head with their TSSs separated by more than 1 kb.\n"
       Mouse ->
-        "\"sense_overlapping\": the LncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
-        \\"intronic\": the lncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
-        \\"natural antisense\": the LncRNA is transcribed from the antisense strand and overlapping with a coding transcript;\n\
-        \\"non-overlapping antisense\": the LncRNA is transcribed from the antisense strand without sharing overlapping exons;\n\
+        "\"sense overlap\": the LncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
+        \\"antisense_exon_overlap\": the lncRNA is transcribed from the antisense strand and overlapping with a coding transcript;\n\
         \\"bidirectional\": the LncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
         \\"intergenic\": there are no overlapping or bidirectional coding transcripts nearby the LncRNA.\n"
       Human ->

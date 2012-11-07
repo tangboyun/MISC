@@ -18,7 +18,7 @@ import           Graphics.UI.Gtk
 import           Report.GUI.Layout
 
 
-version = "0.1.0.13"
+version = "0.1.0.14"
 
 main :: IO ()
 main = do

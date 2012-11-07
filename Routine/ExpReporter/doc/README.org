@@ -14,6 +14,8 @@
 #+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 
 * 版本说明
+** Version 0.1.0.14
+   修改小鼠LncRNA表头relationship的注释。
 ** Version 0.1.0.13
    过滤时，无视ControlType项的大小写。
 ** Version 0.1.0.12

@@ -106,8 +106,8 @@ atvFile (Setting chip rna _ _) = specStr ++ commonStr
           case chip of
             GE -> "Gene"
             _ -> case rna of
-              Coding -> "mRNA"
-              _      -> "LncRNA"
+              Coding -> "mRNAs"
+              _      -> "LncRNAs"
 
 
 mkdir fp = doesDirectoryExist fp >>=

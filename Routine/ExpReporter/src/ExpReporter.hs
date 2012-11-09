@@ -14,19 +14,21 @@
 
 module Main where
 
-import           Graphics.UI.Gtk
-import           Report.GUI.Layout
+import Data.Version
+import Graphics.UI.Gtk
+import Report.GUI.Layout
 
-
-version = "0.1.0.14"
+version = Version [0,1,0,16] []
 
 main :: IO ()
 main = do
   initGUI
   window <- mkGUI
-  set window [windowTitle := "Expression Profiling Report Maker" ++ " " ++ "v" ++ version,
-              windowDefaultWidth := 300, 
-              containerBorderWidth := 30 ]
+  set window [windowTitle := "Expression Profiling Report Maker" ++
+                             " " ++ "v" ++ showVersion version
+             ,windowDefaultWidth := 300 
+             ,containerBorderWidth := 30
+             ]
   
   widgetShowAll window 
   onDestroy window mainQuit

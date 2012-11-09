@@ -140,7 +140,7 @@ allTargetWB set@(Setting c r _ _) str =
         map table
         [boxPlotStr
         ,scatterPlotStr
-        ,render $ setAttribute "nSample" (norEnd-norBeg+1) clustringTemplate]
+        ,render $ setAttribute "nSample" (norEnd-norBeg+1) $ clusteringTemplate set]
       addS wb = wb # addStyle (Name "boldCell") boldCell
                    # addStyle (Name "riCell") riCellStyle
                    # addStyle (Name "niCell") niCellStyle

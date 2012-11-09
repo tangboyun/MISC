@@ -124,13 +124,13 @@ relationStr s =
   where
     relaSpecific = case s of
       Rat -> 
-        "\"sense_exon_overlap\": the lncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
-        \\"sense_intron_overlap\": the lncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
-        \\"antisense_exon_overlap\": the lncRNA is transcribed from the antisense strand and overlapping with a coding transcript; \n\
-        \\"antisense_intron_overlap\": the lncRNA is transcribed from the antisense strand without sharing overlapping exons;\n\
-        \\"bidirection\": the lncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
-        \\"intergenic\": there are no coding transcripts within 30 kb of the lncRNA;\n\
-        \\"others\":  means those lncRNAs, within 30kb of which, there are non-overlapping coding transcripts transcribed from same strand; \
+        "\"sense_exon_overlap\": the LncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
+        \\"sense_intron_overlap\": the LncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
+        \\"antisense_exon_overlap\": the LncRNA is transcribed from the antisense strand and overlapping with a coding transcript; \n\
+        \\"antisense_intron_overlap\": the LncRNA is transcribed from the antisense strand without sharing overlapping exons;\n\
+        \\"bidirection\": the LncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
+        \\"intergenic\": there are no coding transcripts within 30 kb of the LncRNA;\n\
+        \\"others\":  means those LncRNAs, within 30kb of which, there are non-overlapping coding transcripts transcribed from same strand; \
         \or, there are non-overlapping coding transcripts transcribed tail to tail; \
         \or there are non-overlapping coding transcripts transcribed head to head with their TSSs separated by more than 1 kb.\n"
       Mouse ->
@@ -139,8 +139,8 @@ relationStr s =
         \\"bidirectional\": the LncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
         \\"intergenic\": there are no overlapping or bidirectional coding transcripts nearby the LncRNA.\n"
       Human ->
-        "\"exon sense-overlapping\": the lncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
-        \\"intron sense-overlapping\": the lncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
+        "\"exon sense-overlapping\": the LncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
+        \\"intron sense-overlapping\": the LncRNA is overlapping the intron of a coding transcript on the same genomic strand;\n\
         \\"intronic antisense\": the LncRNA is overlapping the intron of a coding transcript on the antisense strand;\n\
         \\"natural antisense\": the LncRNA is transcribed from the antisense strand and overlapping with a coding transcript;\n\
         \\"bidirectional\": the LncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
@@ -207,9 +207,9 @@ scatterPlotStr =
   \the variation (or reproducibility) between chips.\n\n\   
   \    Press Ctrl and rolling button of your mouse to zoom in.\n"
 
-clustringTemplate :: Stringable a => StringTemplate a
-clustringTemplate =
-  newSTMP
+clusteringTemplate :: Stringable a => Setting -> StringTemplate a
+clusteringTemplate (Setting chip rna _ _) =
+  newSTMP $
   "Heat Map and Unsupervised Hierarchical Clustering\n\n\
   \    Hierarchical clustering is one of the simplest and widely used clustering \
   \techniques for analysis of gene expression data. Cluster analysis arranges samples into \
@@ -217,9 +217,14 @@ clustringTemplate =
   \among samples. The dendrogram shows the relationships among the expression levels of samples.\n\n\      
   \    Here, hierarchical clustering was performed based on \"All Targets Value\". \
   \Your experiment consists of $nSample$ different samples. The result of hierarchical clustering on \
-  \conditions shows distinguishable gene expression profiling among samples.\n\n\
+  \conditions shows distinguishable " ++ polymer ++  " expression profiling among samples.\n\n\
   \    Press Ctrl and rolling button of your mouse to zoom in.\n"
-
+  where
+    polymer = case chip of
+                GE -> "gene"
+                _  -> case rna of
+                       Coding -> "mRNAs"
+                       _      -> "LncRNAs"
 
 volcanoPoltStr :: CutOff -> Setting -> String
 volcanoPoltStr (C fc (Just (_,p))) (Setting c r _ _) =

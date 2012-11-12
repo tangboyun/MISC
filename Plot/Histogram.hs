@@ -1,4 +1,4 @@
-{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE NoMonomorphismRestriction, FlexibleContexts #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 一些柱状图相关便利函数
@@ -11,13 +11,43 @@
 -- 
 --
 -----------------------------------------------------------------------------
-module Histogram where
+module Main where
 
 import Diagrams.Attributes
 import Diagrams.TwoD
+import qualified Statistics.Sample.Histogram as H
+import qualified Data.Vector.Generic as GV
+import qualified Data.Vector.Unboxed as UV
+import Statistics.Distribution
+import Data.Colour
+import Diagrams.Prelude
+import Diagrams.Backend.Cairo.CmdLine
+import Data.Colour.Names
+import Function
+import Statistics.Distribution.Normal
+import Control.Monad
+import System.Random.MWC
+import qualified System.Random.MWC.Distributions as R
+import Data.List
 
+histogram :: (GV.Vector v Double, Renderable (Path R2) b) => Int -> Colour Double -> v Double -> Diagram b R2
+histogram nBin c vec =
+  let (low,up) = H.range nBin vec
+      w = (up - low) / fromIntegral nBin
+      v = H.histogram_ nBin low up vec ::  UV.Vector Double
+      factorX = UV.maximum v / (0.618 * (up - low))
+  in scaleX factorX . alignBL . hcat . map (safeRect w c) . GV.toList $ v 
+  where 
+    safeRect w c h = if h /= 0
+                     then rect w h
+                          # alignB
+                          # fillColor c
+                     else hrule w
+                          # alignB
 
--- | 柱状图绘制。给定颜色与宽度，绘制一系列柱形。原点为第一个柱状体底部中点。
--- >>> his 颜色 宽度 [高度]
-his c w = hcat . map (fillColor c . alignB . rect w)
-
+main = do
+  gen <- create
+  vs <- replicateM 10000 (R.standard gen)
+  defaultMain $ 
+    histogram 75 red $ UV.fromList (vs :: [Double])
+  

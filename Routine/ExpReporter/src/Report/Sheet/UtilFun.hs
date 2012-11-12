@@ -142,6 +142,7 @@ reorganize [] = []
 reorganize (h:rs) =
   let at = V.unsafeIndex
       (rawBeg,norEnd) = findNumPart h
+      
       organize vec = sortBy (\a b ->
                               comparing (extractG . (h `at`)) a b `mappend`
                               comparing (extractS . (h `at`)) a b
@@ -187,5 +188,9 @@ isSuffixOf :: ByteString -> ByteString -> Bool
 isSuffixOf = B8.isPrefixOf `on` B8.reverse
 
 
-extractG = B8.tail . head . tail . B8.split ',' . B8.takeWhile (/= ']') . B8.tail
+extractG str =
+  case tail . B8.split ',' . B8.takeWhile (/= ']') . B8.tail $ str of
+    [] -> ""
+    ss -> B8.tail . head $ ss
+    
 extractS = head . B8.split ',' . B8.takeWhile (/= ']') . B8.tail

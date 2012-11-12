@@ -29,7 +29,7 @@ import           Text.XML.SpreadsheetML.Types
 import           Text.XML.SpreadsheetML.Util
 import           Report.Types
 import           Report.Sheet.UtilFun
-
+import           Debug.Trace
 
 
 allTargetWB :: Setting -> ByteString -> (Workbook, [ByteString])
@@ -40,10 +40,10 @@ allTargetWB set@(Setting c r _ _) str =
       (hraw:rss) = map (V.fromList . B8.split '\t') rs
       ts = removeUnusedAnno set $ reorganize $
            V.map removeDQ hraw : rss 
-      h = head ts
+      h = head ts 
       j = fromJust $ V.elemIndex "Number Passed" h
       at = V.unsafeIndex
-      ts' =
+      ts' = 
         case V.elemIndex "ControlType" h of
           Nothing -> map (V.ifilter (\idx _ -> idx /= j)) (h:tail ts)
           Just i -> map (V.ifilter (\idx _ -> idx /= i && idx /= j)) $
@@ -149,7 +149,8 @@ allTargetWB set@(Setting c r _ _) str =
                    # addStyle (Name "Default") defaultS
                    # addStyle (Name "white") whiteCellStyle
       infos = hs ++ [B8.pack $ "Num of entities:" ++ " " ++ show ((fromIntegral $ B8.count '\n' str) - length hs - 1)]
-  in case c of
+  in trace (show ts) $
+     case c of
     GE -> (addS $ mkWorkbook $ map (\(n,t) -> mkWorksheet (Name n) t) tables,infos)
     _  -> case r of
       Coding -> (addS $ mkWorkbook $

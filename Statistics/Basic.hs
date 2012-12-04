@@ -25,8 +25,40 @@ import qualified Data.Vector                 as V
 import qualified Data.Vector.Generic         as GV
 import qualified Data.Vector.Generic.Mutable as GVM
 import qualified Data.Vector.Unboxed         as UV
+import qualified Data.Vector.Storable as SV
 
-    
+mean :: (Floating a, GV.Vector v a) => v a -> a
+mean = GV.ifoldl' (\acc i e -> acc + (e-acc) / fromIntegral (i+1)) 0 
+{-# SPECIALIZE mean :: UV.Vector Float -> Float #-}
+{-# SPECIALIZE mean :: SV.Vector Float -> Float #-}
+{-# SPECIALIZE mean :: UV.Vector Double -> Double #-}
+{-# SPECIALIZE mean :: SV.Vector Double -> Double #-}
+{-# SPECIALIZE mean :: (GV.Vector v Float) => v Float -> Float #-}
+{-# SPECIALIZE mean :: (GV.Vector v Double) => v Double -> Double #-}
+
+-- | pearson correlation coef
+pcc :: (Real a,Floating a, GV.Vector v a) => v a -> v a -> a
+pcc v1 v2 =
+  let m1 = mean v1
+      m2 = mean v2
+  in (\(num,(res1,res2)) ->
+       num / (sqrt $ res1 * res2)
+       ) $ GV.ifoldl'
+     (\(num,(res1,res2)) i e1 ->
+       let val1 = e1
+           val2 = GV.unsafeIndex v2 i
+           num' = num + (val1-m1) * (val2-m2)
+           res1' = res1 + (val1-m1)^2
+           res2' = res2 + (val2-m2)^2
+       in (num',(res1',res2'))
+     ) (0,(0,0)) v1
+{-# SPECIALIZE pcc :: UV.Vector Float -> UV.Vector Float -> Float #-}
+{-# SPECIALIZE pcc :: SV.Vector Float -> SV.Vector Float -> Float #-}
+{-# SPECIALIZE pcc :: UV.Vector Double -> UV.Vector Double -> Double #-}
+{-# SPECIALIZE pcc :: SV.Vector Double -> SV.Vector Double -> Double #-}
+{-# SPECIALIZE pcc :: (GV.Vector v Float) => v Float -> v Float -> Float #-}
+{-# SPECIALIZE pcc :: (GV.Vector v Double) => v Double -> v Double -> Double #-}
+     
 vecMean :: (Floating a,GV.Vector v a) => V.Vector (v a) -> v a  
 vecMean vv = 
   let n = V.length vv
@@ -43,7 +75,6 @@ vecMean vv =
             m' = m + d / fromIntegral k
         GVM.unsafeWrite m_acc i m'
     GV.unsafeFreeze m_acc
-{-# INLINE vecMean #-}
 {-# SPECIALIZE vecMean :: V.Vector (UV.Vector Float) -> UV.Vector Float #-}
 {-# SPECIALIZE vecMean :: V.Vector (UV.Vector Double) -> UV.Vector Double #-}
 {-# SPECIALIZE vecMean :: (GV.Vector v Float) => V.Vector (v Float) -> v Float #-}
@@ -101,7 +132,6 @@ vecFastVarImpl vv =
     mvec <- GV.unsafeFreeze m_acc 
     vvec <- GV.unsafeFreeze v_acc
     return (mvec,vvec)
-{-# INLINE vecFastVarImpl #-}
 {-# SPECIALIZE vecFastVarImpl :: V.Vector (UV.Vector Float) -> (UV.Vector Float,UV.Vector Float) #-}
 {-# SPECIALIZE vecFastVarImpl :: V.Vector (UV.Vector Double) -> (UV.Vector Double,UV.Vector Double) #-}
 {-# SPECIALIZE vecFastVarImpl :: (GV.Vector v Float) => V.Vector (v Float) -> (v Float,v Float) #-}

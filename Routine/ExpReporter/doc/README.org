@@ -14,6 +14,12 @@
 #+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 
 * 版本说明
+** Version 0.1.0.18
+   差异基因报表格式变动，注释项移前。另：修正差异报表命名问题，
+   当有必要时(有组间比较时并包含样本比较时)，正确添加后缀Pass Volcano Plot
+
+** Version 0.1.0.17
+   bug修正：修正当无组名时，All Targets Value报表出错，程序无法运行的bug
 ** Version 0.1.0.16
    大鼠lnc的表头注释修改，由"lncRNA" -> "LncRNA"
 ** Version 0.1.0.15

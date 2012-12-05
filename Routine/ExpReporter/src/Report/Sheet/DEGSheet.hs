@@ -89,6 +89,7 @@ sampleSheet (C f _) setting@(Setting chip rna _ sheet) (header,vecs) (s1,s2) =
                               ls = [0..V.length header - 1]
                               headIdx = V.fromList $ take minI ls
                               annoIdx = V.fromList $ drop (maxI + 1) ls
+                              n = V.length annoIdx
                               f1 = map (string . B8.unpack) . V.toList
                               f2 = map (number . read . B8.unpack) . V.toList
                               f3 = map (toCell . B8.unpack) . V.toList
@@ -98,41 +99,47 @@ sampleSheet (C f _) setting@(Setting chip rna _ sheet) (header,vecs) (s1,s2) =
                               afcV = abs fcV
                               calcPart = case sheet of
                                            Numeric -> map number [fcV,lfcV,afcV]
-                                           _       -> map formula [fcFormula,lfcFormula,afcFormula]
+                                           _       -> map formula [fcFormula n,lfcFormula n,afcFormula n] -- rewrite
                           in (mkRow $ 
                               f1 (V.unsafeBackpermute vec headIdx) ++
                               calcPart ++ [string reg] ++
+                              f3 (V.unsafeBackpermute vec annoIdx) ++
                               f2 (V.unsafeBackpermute vec $
                                V.fromList [rawIdxS1,rawIdxS2,norIdxS1
-                                          ,norIdxS2]) ++
-                              f3 (V.unsafeBackpermute vec annoIdx)
+                                          ,norIdxS2])
+                              
                              ,vec `at` gsIdx)
       tabHeader isUp = let (minI,maxI) = findNumPart header
                            ls = [0..V.length header - 1]
                            begPart = V.toList $ V.unsafeBackpermute header $
                                      V.fromList $ take minI ls
-                           endPart = V.toList $ V.unsafeBackpermute header $
+                           annPart = V.toList $ V.unsafeBackpermute header $
                                      V.fromList $ drop (maxI + 1) ls
+                           nA = length annPart
                            fcStr = map (render . setManyAttrib [("s1",s1),("s2",s2)]) 
                                    [fcTemplate,lfcTemplate,afcTemplate,rgTemplate]
-                           titleLs = begPart ++ fcStr ++
-                                     map (header `at`) [rawIdxS1,rawIdxS2,norIdxS1,norIdxS2] ++
-                                     endPart
+                           nB = length $ begPart ++ fcStr ++ annPart
+                           titleLs = begPart ++ fcStr ++ annPart ++
+                                     map (header `at`) [rawIdxS1,rawIdxS2,norIdxS1,norIdxS2]
                            len = length titleLs
                            regStr = if isUp then "up" else "down"
                            titleS = if isUp then "upTitle" else "dnTitle"
                            attrs  = let commonAttr = [("s1",s1)
                                                      ,("s2",s2)
-                                                     ,("fc",B8.pack $ printf "%.1f" f) 
-                                                     ,("annBeg", toStr $ length begPart + 8)
-                                                     ,("annEnd", toStr $ len - 1)
-                                                     ,("annos", foldl1 (\a b -> a `B8.append` ", " `B8.append` b) endPart)]
+                                                     ,("fc",B8.pack $ printf "%.1f" f)
+                                                     ,("srBeg", toStr $ nB)
+                                                     ,("srEnd", toStr $ nB+1)
+                                                     ,("snBeg", toStr $ nB+2)
+                                                     ,("snEnd", toStr $ nB+3)
+                                                     ,("annBeg", toStr $ length begPart + 4)
+                                                     ,("annEnd", toStr $ length begPart + 3 + nA)
+                                                     ,("annos", foldl1 (\a b -> a `B8.append` ", " `B8.append` b) annPart)]
                                     in case rna of
                                       Coding    -> commonAttr
                                       NonCoding ->
                                         let source = toStr $ fromJust $ elemIndex "source" titleLs 
                                             relaBeg = toStr $ fromJust $ elemIndex "relationship" titleLs
-                                            relaEnd = toStr $ len -1
+                                            relaEnd = toStr $ (length $ begPart ++ fcStr ++ annPart) - 1
                                         in commonAttr ++ 
                                            [("source",source)
                                            ,("relaBeg",relaBeg)
@@ -147,7 +154,7 @@ sampleSheet (C f _) setting@(Setting chip rna _ sheet) (header,vecs) (s1,s2) =
                                       # addTextPropertyAtRanges (noteStr `match` vsRegex) [Bold, Text $ dfp {color = Just red}]
                                       # addTextPropertyAtRanges (noteStr `match` cutOffRegex) [Bold, Text $ dfp {color = Just red}] 
                                       # addTextPropertyAtRanges (noteStr `match` log2Regex) [Bold, Text $ dfp {color= Just dodgerblue}] 
-                           note = mkRow [noteCell ]
+                           note = mkRow [noteCell]
                            mol = case chip of
                                   GE -> "genes"
                                   _  -> case rna of
@@ -166,9 +173,9 @@ sampleSheet (C f _) setting@(Setting chip rna _ sheet) (header,vecs) (s1,s2) =
                            line2 = mkRow
                                    [emptyCell 
                                    ,string "Fold Change and Regulation" # mergeAcross 3 # withStyleID "frCell"
+                                   ,string "Annotations" # mergeAcross (fromIntegral $ length annPart - 1) # withStyleID "annoCell"
                                    ,string "Raw Intensities" # mergeAcross 1 # withStyleID "riCell"
                                    ,string "Normalized Intensities" # mergeAcross 1 # withStyleID "niCell"
-                                   ,string "Annotations" # mergeAcross (fromIntegral $ length endPart - 1) # withStyleID "annoCell"
                                    ]
                            line3 = mkRow $
                                    map (withStyleID "boldCell" . string . B8.unpack) titleLs
@@ -243,23 +250,24 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _ sheet)
                               ls = [0..V.length header - 1]
                               headIdx = V.fromList $ take minI ls
                               annoIdx = V.fromList $ drop (maxI + 1) ls
+                              annoLen = V.length annoIdx                 -- 2012.12.05
                               f1 = map (string . B8.unpack) . V.toList
                               f2 = map (number . read . B8.unpack) . V.toList
                               f3 = map (toCell . B8.unpack) . V.toList
                               reg = if isUp then "up" else "down"
                               ttestStr = render $
                                          setManyAttrib
-                                         [("g1Beg",7+n1+n2)
-                                         ,("g1End",6+n1+n2+n1)
-                                         ,("g2Beg",7+n1+n2+n1)
-                                         ,("g2End",6+2*(n1+n2))
+                                         [("g1Beg",7+n1+n2+annoLen)
+                                         ,("g1End",6+n1+n2+n1+annoLen)
+                                         ,("g2Beg",7+n1+n2+n1+annoLen)
+                                         ,("g2End",6+2*(n1+n2)+annoLen)
                                          ] $ toTTestTemplate tCon
                               fcAbsStr = render $
                                          setManyAttrib
-                                         [("g1Beg",6+n1+n2)
-                                         ,("g1End",5+n1+n2+n1)
-                                         ,("g2Beg",6+n1+n2+n1)
-                                         ,("g2End",5+2*(n1+n2))
+                                         [("g1Beg",6+n1+n2+annoLen)
+                                         ,("g1End",5+n1+n2+n1+annoLen)
+                                         ,("g2Beg",6+n1+n2+n1+annoLen)
+                                         ,("g2End",5+2*(n1+n2)+annoLen)
                                          ] gFCAbsTemplate
                               calcPart1 = case sheet of
                                             Numeric -> map number
@@ -274,37 +282,43 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _ sheet)
                                                        ,mean $ extractNumeric vec norIdxG2                                                        
                                                        ]
                                             _       -> map formula [g1RawStr,g2RawStr,g1NorStr,g2NorStr]
-                              g1RawStr = avgStr 4 (3 + n1)
-                              g2RawStr = avgStr (3+n1) (2+n1+n2)
-                              g1NorStr = avgStr (2+n1+n2) (1+n1+n2+n1)                         
-                              g2NorStr = avgStr (1+n1+n2+n1) (2*(n1+n2))                       
+                              g1RawStr = avgStr (4+annoLen) (3+n1+annoLen)
+                              g2RawStr = avgStr (3+n1+annoLen) (2+n1+n2+annoLen)
+                              g1NorStr = avgStr (2+n1+n2+annoLen) (1+n1+n2+n1+annoLen)                         
+                              g2NorStr = avgStr (1+n1+n2+n1+annoLen) (2*(n1+n2)+annoLen)                       
                           in (mkRow $
                               f1 (V.unsafeBackpermute vec headIdx) ++
-                              calcPart1 ++ [string reg] ++
+                              calcPart1 ++ [string reg] ++         -- 2012.12.05 make annos before intensities
+                              f3 (V.unsafeBackpermute vec annoIdx) ++                              
                               calcPart2 ++
                               f2 (V.unsafeBackpermute vec $
                                   foldr (V.++) V.empty
                                   [rawIdxG1,rawIdxG2,norIdxG1
-                                  ,norIdxG2]) ++
-                              f3 (V.unsafeBackpermute vec annoIdx)
+                                  ,norIdxG2]) 
+
                              ,vec `at` gsIdx)
       tabHeader isUp = let (minI,maxI) = findNumPart header
                            ls = [0..V.length header - 1]
                            begPart = V.toList $ V.unsafeBackpermute header $
                                       V.fromList $ take minI ls
-                           endPart = V.toList $ V.unsafeBackpermute header $
+                           annPart = V.toList $ V.unsafeBackpermute header $
                                       V.fromList $ drop (maxI + 1) ls
                            fcStrs = map (render . setManyAttrib [("s1",gs1),("s2",gs2)]) 
                                      [afcTemplate,rgTemplate]
+                           nA = length annPart
                            gss = [render $ setAttribute "g" gs1 grawTemplate
                                  ,render $ setAttribute "g" gs2 grawTemplate
                                  ,render $ setAttribute "g" gs1 gnorTemplate
                                  ,render $ setAttribute "g" gs2 gnorTemplate
                                  ]
-                           titleLs = begPart ++["P-value"] ++ fcStrs ++ gss ++
+                           nB = length $ begPart ++ ["P-value"] ++ fcStrs ++
+                                annPart ++
+                                gss
+                           titleLs = begPart ++ ["P-value"] ++ fcStrs ++
+                                     annPart ++
+                                     gss ++
                                      map (header `at`)
-                                     (V.toList $ foldr (V.++) V.empty [rawIdxG1,rawIdxG2,norIdxG1,norIdxG2]) ++
-                                     endPart
+                                     (V.toList $ foldr (V.++) V.empty [rawIdxG1,rawIdxG2,norIdxG1,norIdxG2])
                            len = length titleLs
                            regStr = if isUp then "up" else "down"
                            titleS = if isUp then "upTitle" else "dnTitle"
@@ -317,19 +331,23 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _ sheet)
                                                      ,("pCutOff" ,B8.pack $ printf "%.2f" pCutOff)
                                                      ,("fcCutOff",B8.pack $ printf "%.1f" fcCutOff)
                                                      ,("pairOrUnpair",pConStr)
-                                                     ,("rawBeg", toStr $ length begPart+7)
-                                                     ,("rawEnd", toStr $ length begPart+6+n1+n2)
-                                                     ,("norBeg", toStr $ length begPart+7+n1+n2)
-                                                     ,("norEnd", toStr $ length begPart+6+2*(n1+n2))
-                                                     ,("annBeg", toStr $ length begPart+7+2*(n1+n2))
-                                                     ,("annEnd", toStr $ len - 1)
-                                                     ,("annos", foldl1 (\a b -> a `B8.append` ", " `B8.append` b) endPart)]
+                                                     ,("rawBeg", toStr $ length begPart+7+nA)
+                                                     ,("rawEnd", toStr $ length begPart+6+n1+n2+nA)
+                                                     ,("norBeg", toStr $ length begPart+7+n1+n2+nA)
+                                                     ,("norEnd", toStr $ length begPart+6+2*(n1+n2)+nA)
+                                                     ,("annBeg", toStr $ length begPart+3)
+                                                     ,("annEnd", toStr $ length begPart+2+nA)
+                                                     ,("grBeg", toStr $ nB - 4)
+                                                     ,("grEnd", toStr $ nB - 3)
+                                                     ,("gnBeg", toStr $ nB - 2)
+                                                     ,("gnEnd", toStr $ nB - 1)
+                                                     ,("annos", foldl1 (\a b -> a `B8.append` ", " `B8.append` b) annPart)]
                                     in case rna of
                                       Coding    -> commonAttr
                                       NonCoding ->
                                         let source = toStr $ fromJust $ elemIndex "source" titleLs 
                                             relaBeg = toStr $ fromJust $ elemIndex "relationship" titleLs
-                                            relaEnd = toStr $ len -1
+                                            relaEnd = toStr $ nB - length gss - 1
                                         in commonAttr ++ 
                                            [("source",source)
                                            ,("relaBeg",relaBeg)
@@ -364,11 +382,11 @@ groupSheet (C fcCutOff (Just (tCon,pCutOff))) setting@(Setting chip rna _ sheet)
                                    [emptyCell
                                    ,string "P-value" # withStyleID "title"
                                    ,string "Fold Change and Regulation" # mergeAcross 1 # withStyleID "frCell"
+                                   ,string "Annotations" # mergeAcross (fromIntegral $ length annPart - 1) # withStyleID "annoCell"
                                    ,string "Group Raw Intensity" # mergeAcross 1 # withStyleID "groupRawCell"
                                    ,string "Group Normalized Intensity" # mergeAcross 1 # withStyleID "groupNorCell"
                                    ,string "Raw Intensities" # mergeAcross (fromIntegral $ n1+n2-1) # withStyleID "riCell"
                                    ,string "Normalized Intensities" # mergeAcross (fromIntegral $ n1+n2-1) # withStyleID "niCell"
-                                   ,string "Annotations" # mergeAcross (fromIntegral $ length endPart - 1) # withStyleID "annoCell"
                                    ]
                            line3 = mkRow $
                                    map (withStyleID "boldCell" . string . B8.unpack) titleLs

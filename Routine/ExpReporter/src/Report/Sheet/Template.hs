@@ -23,10 +23,11 @@ log2Regex = "[Ll]og2 "
 cutOffRegex = "[[:space:]][[:digit:]]\\.[[:digit:]]{1,2}[[:space:]]"
 
 
-fcFormula, afcFormula, lfcFormula :: String
-fcFormula = "=SIGN(RC[6]-RC[7])*POWER(2,ABS(RC[6]-RC[7]))"
-afcFormula = "=POWER(2,ABS(RC[4]-RC[5]))"
-lfcFormula = "=RC[5]-RC[6]"
+fcFormula, afcFormula, lfcFormula :: Int -> String
+fcFormula n = "=SIGN(RC[" ++ show (6+n) ++ "]-RC[" ++ show (7+n) ++ 
+              "])*POWER(2,ABS(RC[" ++ show (6+n) ++ "]-RC[" ++ show (7+n) ++ "]))"
+afcFormula n = "=POWER(2,ABS(RC[" ++ show (4+n) ++ "]-RC[" ++ show (5+n) ++ "]))"
+lfcFormula n = "=RC[" ++ show (5+n) ++ "]-RC[" ++ show (6+n) ++ "]"
 
 gFCAbsTemplate :: Stringable a => StringTemplate a
 gFCAbsTemplate =
@@ -87,11 +88,11 @@ groupStr (Setting _ rna spec _) =
       \# Column B: P-value, the p-values calculated from $pairOrUnpair$ t-test.\n\
       \# Column C: Absolute Fold change, the absolute fold change between two groups. \n\
       \# Column D: Regulation, it depicts which group has greater or lower intensity values wrt other group.\n\
-      \# Column E, F: Raw intensity of each group.\n\
-      \# Column G, H: Normalized intensity of each group (log2 transformed).\n\
+      \# Column $annBeg$ ~ $annEnd$: Annotations to each probe, including $annos$.\n\
+      \# Column $grBeg$, $grEnd$: Raw intensity of each group.\n\
+      \# Column $gnBeg$, $gnEnd$: Normalized intensity of each group (log2 transformed).\n\
       \# Column $rawBeg$ ~ $rawEnd$: Raw intensity of each sample.\n\
-      \# Column $norBeg$ ~ $norEnd$: Normalized intensity of each sample (log2 transformed).\n\
-      \# Column $annBeg$ ~ $annEnd$: Annotations to each probe, including $annos$.\n"
+      \# Column $norBeg$ ~ $norEnd$: Normalized intensity of each sample (log2 transformed).\n"
 
 sampleTemplate :: Stringable a => Setting -> StringTemplate a
 sampleTemplate = newSTMP . sampleStr
@@ -113,9 +114,9 @@ sampleStr (Setting _ rna spec _) =
       \Positive value indicates up-regulation and negative value indicates down-regulation.\n\
       \# Column D: Absolute Fold change between two samples. \n\
       \# Column E: Regulation, it depicts which sample has greater or lower intensity values wrt other sample.\n\
-      \# Column F, G: Raw intensity of each sample.\n\
-      \# Column H, I: Normalized intensity of each sample (log2 transformed).\n\
-      \# Column $annBeg$ ~ $annEnd$: Annotations to each probe, including $annos$.\n"
+      \# Column $annBeg$ ~ $annEnd$: Annotations to each probe, including $annos$.\n\
+      \# Column $srBeg$, $srEnd$: Raw intensity of each sample.\n\
+      \# Column $snBeg$, $snEnd$: Normalized intensity of each sample (log2 transformed).\n"
 
 relationStr s = 
   "# Columns $relaBeg$ ~ $relaEnd$: the relationship of lncRNA and its nearby coding gene and the coordinate of the coding gene, \

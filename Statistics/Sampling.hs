@@ -26,12 +26,11 @@ import qualified Data.Vector.Generic.Mutable as GM
 import qualified Data.Vector.Unboxed         as UV
 import           System.Random.MWC
 
-{-# INLINE randomVecByFunc #-}
 {-# SPECIALIZE randomVecByFunc :: G.Vector v Double => Int -> Seed -> (forall s m . Gen s -> m Double) -> (v Double,Seed) #-}
 {-# SPECIALIZE randomVecByFunc :: G.Vector v Float => Int -> Seed -> (forall s m . Gen s -> m Float) -> (v Float,Seed) #-}
 {-# SPECIALIZE randomVecByFunc :: Int -> Seed -> (forall s m . Gen s -> m Double) -> (UV.Vector Double,Seed) #-}
 {-# SPECIALIZE randomVecByFunc :: Int -> Seed -> (forall s m . Gen s -> m Float) -> (UV.Vector Float,Seed) #-}
-randomVecByFunc :: (RealFloat a,G.Vector v a) => Int -> Seed -> (forall s m . Gen s -> m a) -> (v a,Seed)
+randomVecByFunc :: (Floating a,G.Vector v a) => Int -> Seed -> (forall s m . Gen s -> m a) -> (v a,Seed)
 randomVecByFunc len s f = runST $ do
   gen <- initialize $ fromSeed s
   vec <- GM.new len
@@ -42,7 +41,6 @@ randomVecByFunc len s f = runST $ do
   vec' <- G.unsafeFreeze vec
   return (vec',s')
 
-{-# INLINE shuffle #-}
 {-# SPECIALIZE shuffle :: Seed -> UV.Vector Int -> (UV.Vector Int,Seed) #-}
 {-# SPECIALIZE shuffle :: Seed -> V.Vector Int -> (V.Vector Int,Seed) #-}
 {-# SPECIALIZE shuffle :: G.Vector v Int => Seed -> v Int -> (v Int,Seed) #-}
@@ -65,3 +63,6 @@ shuffle s v =
     v' <- G.unsafeFreeze mv
     return $ (v',s')
 
+permute :: Int -> Seed -> v a -> ([v a],Seed)
+permute n s vec =
+  let len = G.length vec

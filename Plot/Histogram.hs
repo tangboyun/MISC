@@ -77,7 +77,18 @@ xAxis len step beginAt w =
 --             (text' (fromIntegral step / 4) (show v))) ls)
 --   where
 text' s t = text t # fontSize s <> strutY (1.2 * s)
-     
+
+units low up = last $
+               takeWhile (\c -> (up - low) / c >= 4.5) $
+               takeWhile (<= (up - low)) $
+               concatMap (\c ->  map (10^^c *) [1,2,5])  [-4..]
+
+fmtStr up low | up - low >= 5 = "%.0f"
+              | up - low >= 0.5 = "%,1f"
+              | up - low >= 0.25 = "%.2f"
+              | up - low >= 0.125 = "%.3f"
+              | otherwise = error "too small interval"
+
 main = do
   gen <- create
   vs <- replicateM 10000 (R.standard gen)

@@ -38,21 +38,6 @@ designMatrix ns =
                     [1.0] ++ 
                     replicate (l - row - 1) 0)
      ) $ zip [0..] ns
-  
--- getPfromT :: Vector FloatType -> FloatType -> TestType -> Vector FloatType
--- getPfromT tV df tp =
---   let pf =
---         case tp of
---           TwoTail -> (\e -> if e > 1 then 1 else e ) . 
---                      (2 *) . 
---                      density_1p TDist Lower df . 
---                      negate . abs
---           LeftTail -> (\e -> if e > 1 then 1 else e ) .
---                       density_1p TDist Lower df . 
---                       negate
---           RightTail -> (\e -> if e > 1 then 1 else e ) .
---                        density_1p TDist Lower df 
---   in cmap pf tV
 
 rvmTTest :: ExpData -> ExpData -> TestType -> Vector FloatType
 rvmTTest group1 group2 tp = 

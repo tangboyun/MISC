@@ -12,8 +12,9 @@
 #+STARTUP: inlineimages
 #+OPTIONS: H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
 #+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
-
 * 版本说明
+** Version 0.1.0.19
+   移除Debug.Trace相关项，该项导致All Targets Value报表输出时space leak
 ** Version 0.1.0.18
    差异基因报表格式变动，注释项移前。另：修正差异报表命名问题，
    当有必要时(有组间比较时并包含样本比较时)，正确添加后缀Pass Volcano Plot

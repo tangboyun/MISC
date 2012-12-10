@@ -63,6 +63,25 @@ shuffle s v =
     v' <- G.unsafeFreeze mv
     return $ (v',s')
 
-permute :: Int -> Seed -> v a -> ([v a],Seed)
+permute :: G.Vector v a => Int -> Seed -> v a -> ([v a],Seed)
 permute n s vec =
-  let len = G.length vec
+  let l = G.length vec
+      v = G.concat $ replicate n vec
+      t = n * l
+  in runST $ do
+    mv <- G.unsafeThaw v
+    gen <- restore s
+    idxV <- UV.generateM t
+            (\idx ->
+              let (c,r) = idx `divMod` l
+                  i = c * l
+              in do
+                i' <- uniformR (r, l - 1) gen
+                return $! (i+i')
+            )
+            
+    forM_ [0..t-1] $ \i -> 
+      GM.unsafeSwap mv i (UV.unsafeIndex idxV i)
+    v' <- G.unsafeFreeze mv
+    s' <- save gen
+    return (map ((\i -> G.unsafeSlice i l v').(*l)) [0..n-1] ,s')

@@ -13,7 +13,8 @@
 -----------------------------------------------------------------------------
 module Statistics.Basic 
        (
-         mean
+         minMax
+       , mean
        , pcc
        , vecMean
        , vecFastVar
@@ -28,6 +29,46 @@ import qualified Data.Vector.Generic         as GV
 import qualified Data.Vector.Generic.Mutable as GVM
 import qualified Data.Vector.Unboxed         as UV
 import qualified Data.Vector.Storable as SV
+
+minMax :: (Ord a, GV.Vector v a) => v a -> (a,a)
+minMax v = (GV.minimum v, GV.maximum v)
+{-# RULES
+  "minMax/Unboxed.Vector Int" forall (v :: UV.Vector Int) . minMax v = minMaxI v;
+  "minMax/Storable.Vector Int" forall (v :: SV.Vector Int) . minMax v = minMaxI v;
+  "minMax/Unboxed.Vector Double" forall (v :: UV.Vector Double) . minMax v = minMaxF v;
+  "minMax/Unboxed.Vector Float" forall (v :: UV.Vector Float) . minMax v = minMaxF v;
+  "minMax/Storable.Vector Double" forall (v :: SV.Vector Double) . minMax v = minMaxF v;
+  "minMax/Storable.Vector Float" forall (v :: SV.Vector Float) . minMax v = minMaxF v;
+  #-}
+{-# INLINABLE minMax #-}
+
+minMaxI :: (Bounded a, Ord a, GV.Vector v a) => v a -> (a,a)
+minMaxI v = if not $ GV.null v
+            then GV.foldl' (\(minV,maxV) e ->
+                             let minV' = if e < minV
+                                         then e
+                                         else minV
+                                 maxV' = if e > maxV
+                                         then e
+                                         else maxV
+                             in (minV',maxV')
+                           ) (maxBound,minBound) v
+            else error "Null Vector: minMax"
+{-# INLINABLE minMaxI #-}           
+  
+minMaxF :: (Floating a, Ord a, GV.Vector v a) => v a -> (a,a)
+minMaxF v = if not $ GV.null v
+            then GV.foldl' (\(minV,maxV) e ->
+                             let minV' = if e < minV
+                                         then e
+                                         else minV
+                                 maxV' = if e > maxV
+                                         then e
+                                         else maxV
+                             in (minV',maxV')
+                           ) (1/0,-1/0) v
+            else error "Null Vector: minMax"
+{-# INLINABLE minMaxF #-}           
 
 mean :: (Floating a, GV.Vector v a) => v a -> a
 mean v = GV.ifoldl' (\acc i e -> acc + (e-acc) / fromIntegral (i+1)) 0 v

@@ -13,7 +13,9 @@
 -----------------------------------------------------------------------------
 module Statistics.Basic 
        (
-         vecMean
+         mean
+       , pcc
+       , vecMean
        , vecFastVar
        , vecFastMeanVar
        )
@@ -28,16 +30,11 @@ import qualified Data.Vector.Unboxed         as UV
 import qualified Data.Vector.Storable as SV
 
 mean :: (Floating a, GV.Vector v a) => v a -> a
-mean = GV.ifoldl' (\acc i e -> acc + (e-acc) / fromIntegral (i+1)) 0 
-{-# SPECIALIZE mean :: UV.Vector Float -> Float #-}
-{-# SPECIALIZE mean :: SV.Vector Float -> Float #-}
-{-# SPECIALIZE mean :: UV.Vector Double -> Double #-}
-{-# SPECIALIZE mean :: SV.Vector Double -> Double #-}
-{-# SPECIALIZE mean :: (GV.Vector v Float) => v Float -> Float #-}
-{-# SPECIALIZE mean :: (GV.Vector v Double) => v Double -> Double #-}
+mean v = GV.ifoldl' (\acc i e -> acc + (e-acc) / fromIntegral (i+1)) 0 v
+{-# INLINABLE mean #-}
 
 -- | pearson correlation coef
-pcc :: (Real a,Floating a, GV.Vector v a) => v a -> v a -> a
+pcc :: (Floating a, GV.Vector v a) => v a -> v a -> a
 pcc v1 v2 =
   let m1 = mean v1
       m2 = mean v2
@@ -52,12 +49,7 @@ pcc v1 v2 =
            res2' = res2 + (val2-m2)^2
        in (num',(res1',res2'))
      ) (0,(0,0)) v1
-{-# SPECIALIZE pcc :: UV.Vector Float -> UV.Vector Float -> Float #-}
-{-# SPECIALIZE pcc :: SV.Vector Float -> SV.Vector Float -> Float #-}
-{-# SPECIALIZE pcc :: UV.Vector Double -> UV.Vector Double -> Double #-}
-{-# SPECIALIZE pcc :: SV.Vector Double -> SV.Vector Double -> Double #-}
-{-# SPECIALIZE pcc :: (GV.Vector v Float) => v Float -> v Float -> Float #-}
-{-# SPECIALIZE pcc :: (GV.Vector v Double) => v Double -> v Double -> Double #-}
+{-# INLINABLE pcc #-}
      
 vecMean :: (Floating a,GV.Vector v a) => V.Vector (v a) -> v a  
 vecMean vv = 
@@ -75,10 +67,7 @@ vecMean vv =
             m' = m + d / fromIntegral k
         GVM.unsafeWrite m_acc i m'
     GV.unsafeFreeze m_acc
-{-# SPECIALIZE vecMean :: V.Vector (UV.Vector Float) -> UV.Vector Float #-}
-{-# SPECIALIZE vecMean :: V.Vector (UV.Vector Double) -> UV.Vector Double #-}
-{-# SPECIALIZE vecMean :: (GV.Vector v Float) => V.Vector (v Float) -> v Float #-}
-{-# SPECIALIZE vecMean :: (GV.Vector v Double) => V.Vector (v Double) -> v Double #-}
+{-# INLINABLE vecMean #-}    
 
 -- | Knuth's one-pass algorithm for computing sample variance.
 -- /Note/: in cases where most sample data is close to the sample's
@@ -86,12 +75,10 @@ vecMean vv =
 -- catastrophic cancellation.
 vecFastVar :: (Floating a,GV.Vector v a) => V.Vector (v a) -> v a
 vecFastVar = snd . vecFastVarImpl
-{-# INLINE vecFastVar #-}
 
 
 vecFastMeanVar :: (Floating a,GV.Vector v a) => V.Vector (v a) -> (v a,v a)
 vecFastMeanVar = vecFastVarImpl
-{-# INLINE vecFastMeanVar #-}
 
 vecMeanVar :: (Floating a,GV.Vector v a) => V.Vector (v a) -> (v a,v a)
 vecMeanVar vv =
@@ -103,6 +90,7 @@ vecMeanVar vv =
                        ) (GV.replicate nFeature 0) vv
       var = GV.map (/ (nSample - 1)) rss
   in (mv,var)
+{-# INLINABLE vecMeanVar #-}     
 
 vecFastVarImpl :: (Floating a,GV.Vector v a) => V.Vector (v a) -> (v a,v a)
 vecFastVarImpl vv = 
@@ -132,9 +120,5 @@ vecFastVarImpl vv =
     mvec <- GV.unsafeFreeze m_acc 
     vvec <- GV.unsafeFreeze v_acc
     return (mvec,vvec)
-{-# SPECIALIZE vecFastVarImpl :: V.Vector (UV.Vector Float) -> (UV.Vector Float,UV.Vector Float) #-}
-{-# SPECIALIZE vecFastVarImpl :: V.Vector (UV.Vector Double) -> (UV.Vector Double,UV.Vector Double) #-}
-{-# SPECIALIZE vecFastVarImpl :: (GV.Vector v Float) => V.Vector (v Float) -> (v Float,v Float) #-}
-{-# SPECIALIZE vecFastVarImpl :: (GV.Vector v Double) => V.Vector (v Double) -> (v Double,v Double) #-}
-
+{-# INLINABLE vecFastVarImpl #-}
 

@@ -20,11 +20,12 @@ import Numeric.LinearAlgebra
 import Numeric.LinearAlgebra.Util
 import Data.Function
 import Data.List
+
 type FloatType = Double
 
 
 
--- | each elem - col mean
+-- | each col has zero mean
 centering :: Matrix FloatType -> Matrix FloatType
 centering !m =
   let n = rows m
@@ -44,8 +45,8 @@ ridgeReg expMatrix resVec ls =
   let m = standization expMatrix
       y = centering resVec
       n = rows m
-      (u,s,v) = thinSVD m
-      r = u <> diag s
+      (u,s,v) = fullSVD m
+      r = u <> s
       lambdas = map (2 **) ls
       gcv lambda =
         let h = m <> v <> pinv ((trans r <> r) `add` scale lambda (ident n)) <> trans r

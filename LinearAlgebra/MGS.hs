@@ -1,6 +1,5 @@
 {-# LANGUAGE ParallelArrays #-}
 {-# OPTIONS_GHC -fvectorise #-}
-{-# OPTIONS_GHC -fno-spec-constr-count #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : Modified Gram-Schmidt
@@ -13,22 +12,23 @@
 -- 
 --
 -----------------------------------------------------------------------------
-module MGS where
+module MGS () where
 
 import Data.Array.Parallel
-import Data.Array.Parallel.Prelude.Double 
-import qualified Prelude
+import Data.Array.Parallel.Prelude.Double
+import qualified Data.Array.Parallel.Prelude.Double as D
+import qualified Prelude as Prelude
 
-<.> :: [:Double:] -> [:Double:] -> Double
-<.> xs ys = sumP [: x * y | x <- xs | y <- ys :]
+(<.>) :: [:Double:] -> [:Double:] -> Double
+(<.>) xs ys = sumP [: x D.* y | x <- xs | y <- ys :]
 
 norm :: [:Double:] -> Double
-norm xs = sqrt $ xs <.> xs
+norm xs = sqrt (xs <.> xs)
 
 normalize :: [:Double:] -> [:Double:]
 normalize xs =
   let n = norm xs
   in [: x/n | x <- xs :]
   
-mgs_impl :: [:[: Double :]:] -> [:[: Double :]:]
-mgs_impl cols = undefined
+-- mgs_impl :: [:[: Double :]:] -> [:[: Double :]:]
+-- mgs_impl cols = Prelude.undefined

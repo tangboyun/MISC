@@ -18,7 +18,7 @@ import Data.Version
 import Graphics.UI.Gtk
 import Report.GUI.Layout
 
-version = Version [0,1,0,19] []
+version = Version [0,1,0,20] []
 
 main :: IO ()
 main = do

@@ -12,6 +12,7 @@
 -----------------------------------------------------------------------------
 module Report.Sheet.Styles where
 import Data.Colour.Names
+import Data.Colour.SRGB
 import Text.XML.SpreadsheetML.Builder
 import Text.XML.SpreadsheetML.Types
 
@@ -31,7 +32,9 @@ noteCellStyle = defaultS
   }
   
 allHeadStyle = defaultS
-  { bgColor = Just khaki
+  {
+--    bgColor = Just khaki
+    bgColor = Just $ sRGB24 255 255 156
   , vAlign = Just "Top"
   , hAlign = Just "Left"
   , wrapText = Just True

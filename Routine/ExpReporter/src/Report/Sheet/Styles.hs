@@ -26,7 +26,9 @@ title = boldCell { hAlign = Just "Center" }
 upTitle = title { bgColor = Just red }
 dnTitle = title { bgColor = Just green }
 noteCellStyle = defaultS
-  { bgColor = Just khaki
+  {
+--    bgColor = Just khaki
+    bgColor = Just $ sRGB24 255 255 156
   , vAlign = Just "Center"
   , wrapText = Just True
   }

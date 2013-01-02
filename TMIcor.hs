@@ -149,7 +149,7 @@ tmiCor seed nPerm kPairs (GD p n _data) label' =
      uv <- UV.unsafeFreeze umv
      let fdrVec = UV.map (\e -> fromIntegral e / fromIntegral (kPairs*nPerm)) $
                   UV.postscanr' (+) 0 uv      
-     result <- UV.generateM kPairs $ \k -> 
+     result <- liftM UV.reverse $ UV.generateM kPairs $ \k -> 
        let idx@(i,j) = UV.unsafeIndex gpVec k
            cor = UV.unsafeIndex tCorVec k
            fdr = UV.unsafeIndex fdrVec k

@@ -81,7 +81,8 @@ pcc v1 v2 =
       m2 = mean v2
   in (\(num,(res1,res2)) ->
        num / (sqrt $ res1 * res2)
-       ) $ GV.ifoldl'
+       ) $
+     GV.ifoldl'
      (\(num,(res1,res2)) i e1 ->
        let val1 = e1
            val2 = GV.unsafeIndex v2 i

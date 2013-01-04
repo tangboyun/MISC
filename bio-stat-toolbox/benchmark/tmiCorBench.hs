@@ -18,7 +18,7 @@ testData n p =
 main :: IO ()
 main = do
   let (gD,label,s) = testData 50 100
-      re = fst $ tmiCor s 100 10 gD label
+      re = fst $ tmiCor s 100 100 gD label
   print re
   -- defaultMain
   --  [bench "tmiCor" $ whnf f (testData 100 10000)]

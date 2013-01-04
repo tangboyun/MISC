@@ -14,11 +14,6 @@
 -----------------------------------------------------------------------------
 
 module Bio.Statistics.Interaction.TMIcor
-       (
-         Result
-       , GData(..)
-       , tmiCor
-       )
        
        where
 import           Control.Monad
@@ -141,13 +136,14 @@ tmiCor seed nPerm kPairs (GD p n _data) label' =
          ex <- H.lookup hTable idx
          when (isJust ex) $
            H.insert pTable idx $ -- p-value
-           fromIntegral (length $
+           fromIntegral
+           (length $
                          dropWhile (<= abs (fromJust ex)) vs) /
            fromIntegral nPerm
          collect umv tCorVec vs'
      uv <- UV.unsafeFreeze umv
      let fdrVec = trace (show uv ) $
-                  UV.imap (\i e -> fromIntegral e / fromIntegral ((i+1)*nPerm)) $
+                  UV.imap (\i e -> fromIntegral e / fromIntegral ((kPairs-i)*nPerm)) $
                   UV.postscanr' (+) 0 uv      
      result <- liftM UV.reverse $ UV.generateM kPairs $ \k -> 
        let idx@(i,j) = UV.unsafeIndex gpVec k
@@ -167,7 +163,7 @@ collect gmv tCorVec = go 1
       n <- GMV.unsafeRead gmv (idx-1)
       GMV.unsafeWrite gmv (idx-1) (n + length vs)
               | otherwise =
-      let (vs1,vs2) = break (<= abs (UV.unsafeIndex tCorVec idx)) vs
+      let (vs1,vs2) = break (> abs (UV.unsafeIndex tCorVec idx)) vs
       in do
         n <- GMV.unsafeRead gmv (idx-1)
         GMV.unsafeWrite gmv (idx-1) (n + length vs1)

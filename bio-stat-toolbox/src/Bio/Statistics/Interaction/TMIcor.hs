@@ -125,9 +125,7 @@ tmiCor seed nPerm kPairs (GD p n _data) label' =
      forM_ [(i,j) | i <- [0..p-1], j <- [i+1..p-1]] $ \idx@(i,j) ->
        let vs = sort $
                 withStrategy
-                (parListChunk (ceiling $
-                               (fromIntegral nPerm :: Double) /
-                               fromIntegral numCapabilities) rdeepseq) $
+                (parList rdeepseq) $
                 map
                 (abs . tCor (V.unsafeIndex vVec i)
                  (V.unsafeIndex vVec j)) ls

@@ -47,7 +47,8 @@ data GData v where
         , nSample :: {-# UNPACK #-} !Int
         , dat :: v Double
         } -> GData v
-
+-- need a in situ trans
+-- http://en.wikipedia.org/wiki/In-place_matrix_transposition  
 
 newtype TCor = TCor
   { unTCor :: ((Int,Int),Double) } deriving (Eq)
@@ -55,6 +56,84 @@ newtype TCor = TCor
 instance Ord TCor where
   -- comparing the abs value
   compare = compare `on` (abs.snd.unTCor)
+
+toSlices :: GV.Vector v Double => Int -> v Double -> [v Double]
+toSlices n v =
+  let (p,r) = GV.length v `divMod` n
+  in if r /= 0
+     then error "toSlices: length v / n ~= 0"
+     else map ((\beg -> GV.slice beg n v).(*n)) [0..p-1]
+{-# INLINABLE toSlices #-}
+
+toIdx :: Int -> (Int,Int) -> Int
+toIdx rowLen (i,j) = i * rowLen + j
+
+
+tmiCorV2 :: (GV.Vector v1 Double,GV.Vector v2 Bool,v1~v2)
+       => Seed -- ^ initial random seed
+       -> Int  -- ^ repeat times for permutation
+       -> Int  -- ^ first k gene pairs
+       -> GData v1 -- ^ vector of gene chip
+       -> v2 Bool
+       -> (Result,Seed)
+{-# INLINABLE tmiCorV2 #-}       
+tmiCorV2 seed nPerm kPairs (GD p n _data) label' =
+  let n1 = GV.foldl' (\acc e -> if e then acc + 1 else acc) 0 label'
+      label = GV.replicate n1 True GV.++ 
+              GV.replicate (GV.length label' - n1) False
+      vec = GV.concat $
+            map
+            (\v ->
+              let (v1,v2) = ipartition' v label'
+                  (m1,var1) = meanVarianceUnb v1 
+                  (m2,var2) = meanVarianceUnb v2
+              in (GV.++)
+                 (GV.map (\e -> (e - m1) / sqrt var1) v1)
+                 (GV.map (\e -> (e - m2) / sqrt var2) v2)                 
+            ) $ toSlices n _data
+      vVec = V.fromList $ toSlices n vec
+      hs = kLargest kPairs vVec label
+      (gps,tCors) = unzip hs
+      gpVec = UV.fromList gps
+      tCorVec = UV.fromList tCors
+      (ls,seed') = permute seed nPerm label
+      minCor = abs $ head tCors
+  in
+   runST $ do
+     hTable <- H.fromList hs :: ST s (HashTable s (Int,Int) Double)
+     -- for calculating p-value
+     pTable <- H.newSized kPairs :: ST s (HashTable s (Int,Int) Double)
+     -- for calculating FDR
+     umv <- UV.unsafeThaw $ UV.replicate kPairs 0
+     forM_ [(i,j) | i <- [0..p-1], j <- [i+1..p-1]] $ \idx@(i,j) ->
+       let vs = sort $
+                withStrategy
+                (parList rdeepseq) $
+                map
+                (abs . tCor (V.unsafeIndex vVec i)
+                 (V.unsafeIndex vVec j)) ls
+           vs' = dropWhile (<= minCor) vs
+       in do
+         ex <- H.lookup hTable idx
+         when (isJust ex) $
+           H.insert pTable idx $ -- p-value
+           fromIntegral
+           (length $
+                         dropWhile (<= abs (fromJust ex)) vs) /
+           fromIntegral nPerm
+         collect umv tCorVec vs'
+     uv <- UV.unsafeFreeze umv
+     let fdrVec = trace (show uv ) $
+                  UV.imap (\i e -> fromIntegral e / fromIntegral ((kPairs-i)*nPerm)) $
+                  UV.postscanr' (+) 0 uv      
+     result <- liftM UV.reverse $ UV.generateM kPairs $ \k -> 
+       let idx@(i,j) = UV.unsafeIndex gpVec k
+           cor = UV.unsafeIndex tCorVec k
+           fdr = UV.unsafeIndex fdrVec k
+       in do
+        pValue <- liftM fromJust $ H.lookup pTable idx 
+        return (i,j,cor,pValue,fdr)
+     return (result,seed')
 
 
 kLargest :: (GV.Vector v1 Double
@@ -82,20 +161,20 @@ kLargest k vVec label
         go acc h (x : xs)
           | acc < k = go (acc + 1) (Heap.insert x h) xs
           | otherwise = go (acc + 1) (Heap.insert x $ Heap.deleteMin h) xs
-    
-tmiCor :: (GV.Vector v1 Double,GV.Vector v2 Bool,v1~v2)
+
+
+
+
+tmiCorV1 :: (GV.Vector v1 Double,GV.Vector v2 Bool,v1~v2)
        => Seed -- ^ initial random seed
        -> Int  -- ^ repeat times for permutation
        -> Int  -- ^ first k gene pairs
        -> GData v1 -- ^ vector of gene chip
        -> v2 Bool
        -> (Result,Seed)
-{-# INLINABLE tmiCor #-}       
-tmiCor seed nPerm kPairs (GD p n _data) label' =
-  let toSlices :: GV.Vector v Double => v Double -> [v Double]
-      toSlices v = map ((\beg -> GV.slice beg n v).(*n)) [0..p-1]
-      {-# INLINE toSlices #-}
-      n1 = GV.foldl' (\acc e -> if e then acc + 1 else acc) 0 label'
+{-# INLINABLE tmiCorV1 #-}       
+tmiCorV1 seed nPerm kPairs (GD p n _data) label' =
+  let n1 = GV.foldl' (\acc e -> if e then acc + 1 else acc) 0 label'
       label = GV.replicate n1 True GV.++ 
               GV.replicate (GV.length label' - n1) False
       vec = GV.concat $
@@ -107,8 +186,8 @@ tmiCor seed nPerm kPairs (GD p n _data) label' =
               in (GV.++)
                  (GV.map (\e -> (e - m1) / sqrt var1) v1)
                  (GV.map (\e -> (e - m2) / sqrt var2) v2)                 
-            ) $ toSlices _data
-      vVec = V.fromList $ toSlices vec
+            ) $ toSlices n _data
+      vVec = V.fromList $ toSlices n vec
       hs = kLargest kPairs vVec label
       (gps,tCors) = unzip hs
       gpVec = UV.fromList gps

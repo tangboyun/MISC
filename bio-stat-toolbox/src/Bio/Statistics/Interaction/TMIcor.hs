@@ -16,6 +16,7 @@
 module Bio.Statistics.Interaction.TMIcor
        
        where
+import Control.Exception (assert)
 import           Control.Monad
 import           Control.Monad.Primitive
 import           Control.Monad.ST.Strict
@@ -31,10 +32,12 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as GMV
 import qualified Data.Vector.Unboxed as UV
+import qualified Data.Vector.Unboxed.Mutable as UMV
 import           GHC.Conc (numCapabilities)
 import           Statistics.Sample
 import           System.Random.MWC
 import           Bio.Statistics.Util
+import           Data.List.Split
 import           Debug.Trace (trace)
 
 type HashTable s k v = B.HashTable s k v
@@ -47,9 +50,41 @@ data GData v where
         , nSample :: {-# UNPACK #-} !Int
         , dat :: v Double
         } -> GData v
--- need a in situ trans
--- http://en.wikipedia.org/wiki/In-place_matrix_transposition  
 
+count :: (GV.Vector v a, Eq a) => a -> v a -> Int
+count e vec = go 0 0
+  where
+    n = GV.length vec
+    go acc idx | idx < n, e == GV.unsafeIndex vec idx = go (acc+1) (idx+1)
+               | idx < n = go acc (idx+1)
+               | otherwise = acc
+
+recomb :: (GV.Vector v1 Double,GV.Vector v2 Bool)
+       => Int
+       -> v2 Bool
+       -> v1 Double -> UV.Vector Double
+recomb rowLen label dat =
+  let n = count True label
+      l = GV.length dat
+      (p,r) = l `divMod` rowLen
+  in if r /= 0
+     then error "recomb: length dat / n ~= 0"
+     else runST $ do
+       mv <- UMV.new l
+       forM_ [0..p-1] $ \i ->
+         let tBeg = i * rowLen
+             fBeg = tBeg + n
+         in GV.foldM_
+            (\(tAcc,fAcc) e ->
+              let origE = GV.unsafeIndex dat $! i * rowLen + tAcc + fAcc
+              in if e
+                 then UMV.unsafeWrite mv (tBeg+tAcc) origE >>
+                      return (tAcc+1,fAcc)
+                 else UMV.unsafeWrite mv (fBeg+fAcc) origE >>
+                      return (tAcc,fAcc+1)
+              ) (0,0) label
+       UV.unsafeFreeze mv
+       
 newtype TCor = TCor
   { unTCor :: ((Int,Int),Double) } deriving (Eq)
 
@@ -77,63 +112,91 @@ tmiCorV2 :: (GV.Vector v1 Double,GV.Vector v2 Bool,v1~v2)
        -> v2 Bool
        -> (Result,Seed)
 {-# INLINABLE tmiCorV2 #-}       
-tmiCorV2 seed nPerm kPairs (GD p n _data) label' =
-  let n1 = GV.foldl' (\acc e -> if e then acc + 1 else acc) 0 label'
-      label = GV.replicate n1 True GV.++ 
-              GV.replicate (GV.length label' - n1) False
-      vec = GV.concat $
-            map
-            (\v ->
-              let (v1,v2) = ipartition' v label'
-                  (m1,var1) = meanVarianceUnb v1 
-                  (m2,var2) = meanVarianceUnb v2
-              in (GV.++)
-                 (GV.map (\e -> (e - m1) / sqrt var1) v1)
-                 (GV.map (\e -> (e - m2) / sqrt var2) v2)                 
-            ) $ toSlices n _data
-      vVec = V.fromList $ toSlices n vec
-      hs = kLargest kPairs vVec label
+tmiCorV2 seed nPerm kPairs (GD p n _data) label' = assert (n == GV.length label') $
+  let nTrue = count True label'
+      nFalse = n - nTrue
+      label = UV.fromList $ replicate nTrue True ++ 
+              replicate nFalse False
+      vVec = V.fromList $
+             map
+             (\v -> runST $ do
+                 let v1 = UV.slice 0 nTrue v
+                     v2 = UV.slice nTrue nFalse v 
+                     (m1,var1) = meanVarianceUnb v1 
+                     (m2,var2) = meanVarianceUnb v2
+                 mv <- UV.unsafeThaw v
+                 forM_ [0..n-1] $ \idx -> do
+                   e <- UMV.unsafeRead mv idx
+                   if idx < nTrue
+                     then UMV.unsafeWrite mv idx ((e-m1) / sqrt var1)
+                     else UMV.unsafeWrite mv idx ((e-m2) / sqrt var2)
+                 UV.unsafeFreeze mv
+             ) $ toSlices n $ recomb n label' _data
+      hs = kLargestV2 nTrue kPairs vVec
       (gps,tCors) = unzip hs
       gpVec = UV.fromList gps
       tCorVec = UV.fromList tCors
-      (ls,seed') = permute seed nPerm label
+      (ls,seed') = permute seed nPerm $ GV.enumFromN 0 n
       minCor = abs $ head tCors
   in
    runST $ do
-     hTable <- H.fromList hs :: ST s (HashTable s (Int,Int) Double)
-     -- for calculating p-value
-     pTable <- H.newSized kPairs :: ST s (HashTable s (Int,Int) Double)
-     -- for calculating FDR
      umv <- UV.unsafeThaw $ UV.replicate kPairs 0
-     forM_ [(i,j) | i <- [0..p-1], j <- [i+1..p-1]] $ \idx@(i,j) ->
-       let vs = sort $
-                withStrategy
-                (parList rdeepseq) $
-                map
-                (abs . tCor (V.unsafeIndex vVec i)
-                 (V.unsafeIndex vVec j)) ls
-           vs' = dropWhile (<= minCor) vs
-       in do
-         ex <- H.lookup hTable idx
-         when (isJust ex) $
-           H.insert pTable idx $ -- p-value
-           fromIntegral
-           (length $
-                         dropWhile (<= abs (fromJust ex)) vs) /
-           fromIntegral nPerm
-         collect umv tCorVec vs'
+     forM_ ls $ \permVec -> do
+       let vVec' = V.fromList $
+                   toSlices n $
+                   recomb n (GV.unsafeBackpermute label permVec) $
+                   UV.generate (n*p) $
+                     (\idx ->
+                       let (i,j) = idx `divMod` n
+                           vec = V.unsafeIndex vVec i
+                       in GV.unsafeIndex vec (GV.unsafeIndex permVec j))
+       mapM_ (collect umv tCorVec) $
+         withStrategy (parBuffer numCapabilities rdeepseq) $
+         map (\vs ->
+               dropWhile (<= minCor) $ sort $
+               map
+               (\(i,j) ->
+                 abs $
+                 tCorV2 nTrue (V.unsafeIndex vVec' i) (V.unsafeIndex vVec' j) 
+               ) vs    
+             ) $ chunksOf 1000 $ [(i,j) | i <- [0..p-1], j <- [i+1..p-1]]
+
      uv <- UV.unsafeFreeze umv
-     let fdrVec = trace (show uv ) $
-                  UV.imap (\i e -> fromIntegral e / fromIntegral ((kPairs-i)*nPerm)) $
-                  UV.postscanr' (+) 0 uv      
+
+     let csum = UV.postscanr' (+) 0 uv      
+         fdrVec = trace (show uv ) $
+                  UV.imap
+                  (\i e ->
+                    fromIntegral e /
+                    fromIntegral ((kPairs-i)*nPerm)) csum
+         pVec = UV.map ((/ (0.5 * (fromIntegral (nPerm * p * (p-1))))) . fromIntegral) csum
      result <- liftM UV.reverse $ UV.generateM kPairs $ \k -> 
        let idx@(i,j) = UV.unsafeIndex gpVec k
            cor = UV.unsafeIndex tCorVec k
            fdr = UV.unsafeIndex fdrVec k
-       in do
-        pValue <- liftM fromJust $ H.lookup pTable idx 
-        return (i,j,cor,pValue,fdr)
+           p = UV.unsafeIndex pVec k
+       in return (i,j,cor,p,fdr)
      return (result,seed')
+
+kLargestV2 :: GV.Vector v Double
+           => Int
+           -> Int   
+           -> V.Vector (v Double)
+           -> [((Int,Int),Double)]
+{-# INLINABLE kLargestV2 #-}
+kLargestV2 nTrue k vVec =
+  assert (not . V.null $ vVec) $
+  let p = V.length vVec
+  in go 0 Heap.empty $
+     map
+     (\ idx@(i, j) ->
+       let v = tCorStdedV2 nTrue (V.unsafeIndex vVec i) (V.unsafeIndex vVec j)
+       in TCor (idx, v))
+     [(i, j) | i <- [0 .. p - 1], j <- [i + 1 .. p - 1]]
+  where go _ h [] = map unTCor $ toList h
+        go acc h (x : xs)
+          | acc < k = go (acc + 1) (Heap.insert x h) xs
+          | otherwise = go (acc + 1) (Heap.insert x $ Heap.deleteMin h) xs
 
 
 kLargest :: (GV.Vector v1 Double
@@ -246,7 +309,29 @@ collect gmv tCorVec = go 1
         GMV.unsafeWrite gmv (idx-1) (n + length vs1)
         go (idx+1) vs2
 
-        
+
+tCorStdedV2 :: (GV.Vector v1 Double
+            ,GV.Vector v2 Double
+            ,v1 ~ v2)
+          => Int -> v1 Double -> v2 Double -> Double
+{-# INLINABLE tCorStdedV2 #-}             
+tCorStdedV2 nTrue vi vj =
+  let (v1i,v2i) = GV.splitAt nTrue vi
+      (v1j,v2j) = GV.splitAt nTrue vj
+  in atanh (pccStded v1i v1j) -
+     atanh (pccStded v2i v2j)
+
+tCorV2 :: (GV.Vector v1 Double
+       ,GV.Vector v2 Double
+       ,v1 ~ v2)
+     => Int -> v1 Double -> v2 Double -> Double
+{-# INLINABLE tCorV2 #-}        
+tCorV2 nTrue vi vj =
+  let (v1i,v2i) = GV.splitAt nTrue vi
+      (v1j,v2j) = GV.splitAt nTrue vj
+  in atanh (pcc v1i v1j) -
+     atanh (pcc v2i v2j)
+
 tCorStded :: (GV.Vector v1 Double
             ,GV.Vector v2 Double
             ,GV.Vector v3 Bool

@@ -136,7 +136,7 @@ tmiCorV2 seed nPerm kPairs (GD p n _data) label' = assert (n == GV.length label'
       (gps,tCors) = unzip hs
       gpVec = UV.fromList gps
       tCorVec = UV.fromList tCors
-      (ls,seed') = permute seed nPerm $ GV.enumFromN 0 n
+      (ls,seed') = permute seed nPerm $ UV.enumFromN 0 n
       minCor = abs $ head tCors
   in
    runST $ do
@@ -144,7 +144,7 @@ tmiCorV2 seed nPerm kPairs (GD p n _data) label' = assert (n == GV.length label'
      forM_ ls $ \permVec -> do
        let vVec' = V.fromList $
                    toSlices n $
-                   recomb n (GV.unsafeBackpermute label permVec) $
+--                   recomb n (GV.unsafeBackpermute label permVec) $
                    UV.generate (n*p) $
                      (\idx ->
                        let (i,j) = idx `divMod` n
@@ -164,7 +164,7 @@ tmiCorV2 seed nPerm kPairs (GD p n _data) label' = assert (n == GV.length label'
      uv <- UV.unsafeFreeze umv
 
      let csum = UV.postscanr' (+) 0 uv      
-         fdrVec = trace (show uv ) $
+         fdrVec = trace (show tCorVec ) $
                   UV.imap
                   (\i e ->
                     fromIntegral e /
@@ -270,7 +270,7 @@ tmiCorV1 seed nPerm kPairs (GD p n _data) label' =
                 (parList rdeepseq) $
                 map
                 (abs . tCor (V.unsafeIndex vVec i)
-                 (V.unsafeIndex vVec j)) ls
+                 (V.unsafeIndex vVec j) . UV.convert) ls
            vs' = dropWhile (<= minCor) vs
        in do
          ex <- H.lookup hTable idx
@@ -282,7 +282,7 @@ tmiCorV1 seed nPerm kPairs (GD p n _data) label' =
            fromIntegral nPerm
          collect umv tCorVec vs'
      uv <- UV.unsafeFreeze umv
-     let fdrVec = trace (show uv ) $
+     let fdrVec = trace (show tCorVec ) $
                   UV.imap (\i e -> fromIntegral e / fromIntegral ((kPairs-i)*nPerm)) $
                   UV.postscanr' (+) 0 uv      
      result <- liftM UV.reverse $ UV.generateM kPairs $ \k -> 

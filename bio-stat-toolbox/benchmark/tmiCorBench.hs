@@ -20,8 +20,7 @@ main = do
   let (gD,label,s) = testData 50 100
       re = fst $ tmiCorV1 s 100 100 gD label
       re2 = fst $ tmiCorV2 s 100 100 gD label
-  print re
-  print re2
+  print $ UV.and $ UV.zipWith (==) re re2
   -- defaultMain
   --  [bench "tmiCor" $ whnf f (testData 100 10000)]
   -- where

@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns,RankNTypes,FlexibleContexts,TypeFamilies #-}
+{-# LANGUAGE BangPatterns,RankNTypes,FlexibleContexts,TypeFamilies, NoMonomorphismRestriction #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -17,6 +17,9 @@ import           Control.Monad
 import           Control.Monad.ST.Strict
 import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as GMV
+import qualified Data.Vector.Unboxed as UV
+import qualified Data.Vector.Unboxed.Mutable as UMV
+
 import           Statistics.Sample
 import           System.Random.MWC
 
@@ -59,27 +62,27 @@ ipartition vec boolVec =
     v2' <- GV.unsafeFreeze mv2
     return (v1,v2')
 
-permute :: GV.Vector v a => Seed -> Int -> v a -> ([v a],Seed)
+permute :: (UV.Unbox a,GV.Vector v1 a) => Seed -> Int -> v1 a -> ([UV.Vector a],Seed)
 {-# INLINABLE permute #-}
 permute s n vec =
   let l = GV.length vec
-      v = GV.concat $ replicate n vec
+      v = UV.generate t (\idx -> GV.unsafeIndex vec (idx `mod` l))
       t = n * l
       end = l - 1
   in runST $ do
-    mv <- GV.unsafeThaw v
+    mv <- UV.unsafeThaw v
     gen <- restore s
             
     forM_ [0..t-1] $ \idx -> do
       let (c,r) = idx `divMod` l
           i = c * l
       i' <- uniformR (r,end) gen
-      GMV.unsafeSwap mv idx (i+i') 
+      UMV.unsafeSwap mv idx (i+i') 
 
-    v' <- GV.unsafeFreeze mv
+    v' <- UV.unsafeFreeze mv
     s' <- save gen
-    return (map ((\i -> GV.unsafeSlice i l v').(*l)) [0..n-1] ,s')
-
+    return (map ((\i -> UV.unsafeSlice i l v').(*l)) [0..n-1] ,s')
+    
 pcc :: (GV.Vector v1 Double
       ,GV.Vector v2 Double
       ,v1 ~ v2)

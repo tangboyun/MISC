@@ -64,11 +64,11 @@ ipartition vec boolVec =
     return (v1,v2')
 
 permute :: GV.Vector v a => Seed -> Int -> v a -> ([v a],Seed)
-permute s n vec =
-  let l = GV.length vec
-      v = GV.concat $ replicate n vec
-      t = n * l
-      end = l - 1
+permute !s !n !vec =
+  let !l = GV.length vec
+      !v = GV.concat $ replicate n vec
+      !t = n * l
+      !end = l - 1
   in runST $ do
     mv <- GV.unsafeThaw v
     gen <- restore s
@@ -77,11 +77,15 @@ permute s n vec =
       let (c,r) = idx `divMod` l
           i = c * l
       i' <- uniformR (r,end) gen
-      GMV.unsafeSwap mv idx (i+i') 
+      GMV.unsafeSwap mv idx $! (i+i') 
 
     v' <- GV.unsafeFreeze mv
     s' <- save gen
-    return (map ((\i -> GV.unsafeSlice i l v').(*l)) [0..n-1] ,s')
+    let !ls = map (\i ->
+                    let !e = v' `seq` GV.unsafeSlice (i*l) l v'
+                    in e
+                  ) [0..n-1]
+    return (ls,s')
 {-# INLINABLE permute #-}
 
 

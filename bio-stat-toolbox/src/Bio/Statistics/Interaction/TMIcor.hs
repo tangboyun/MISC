@@ -19,10 +19,13 @@ module Bio.Statistics.Interaction.TMIcor
 import           Bio.Statistics.Util
 import           Control.Exception (assert)
 import           Control.Monad
-import           Control.Monad.Par
+import Control.Monad.Par.Scheds.Direct
+import Control.Monad.Par.Combinator
+
+--import           Control.Monad.Par
 import           Control.Monad.Primitive
 import           Control.Monad.ST.Strict
-import           Control.Parallel.Strategies hiding (parMap)
+import           Control.Parallel.Strategies 
 import           Data.Foldable (toList)
 import           Data.Function
 import qualified Data.HashTable.Class as H
@@ -71,9 +74,6 @@ toStdScores nTrue =
           then GMV.unsafeWrite mv idx ((e-m1) / sqrt var1)
           else GMV.unsafeWrite mv idx ((e-m2) / sqrt var2)
       GV.unsafeFreeze mv)
-  where
-    halfL1 = 32 * 1024
-    doubleSize = 8
 
 calcIdx :: UV.Vector Int -> Int -> Int -> (Int,Int)
 calcIdx vec n idx =
@@ -114,51 +114,53 @@ tmiCorV3 seed nPerm kPairs (GD p n _data) label' = assert (n == GV.length label'
       chunkSize = 5000
       minCor = abs $ head tCors
       psVec = getVec p
-  in
-   runST $ do
-     tmv <- UV.unsafeThaw $ UV.replicate kPairs 0
-     forM_ ls $ \permVec -> do
-       let vVec' = withStrategy rdeepseq $ V.fromList $
-                   toStdScores nTrue $
-                   toSlices n $
-                   UV.generate (n*p) $
-                     (\idx ->
-                       let (i,j) = idx `divMod` n
-                           vec = V.unsafeIndex vVec i
-                       in GV.unsafeIndex vec (GV.unsafeIndex permVec j))
-           t = p * (p-1) `quot` 2
-           onCore vV i = runST $ do
-             mv <- UV.unsafeThaw $ UV.replicate kPairs 0
-             let idxs = [i,i + numCapabilities..t-1]
-             mapM_ (collect mv tCorVec .
-                    dropWhile (<= minCor) . sort .
-                    map
-                    (\(i,j) -> 
-                      abs $
-                      tCorStdedV2 nTrue (V.unsafeIndex vV i) (V.unsafeIndex vV j) 
-                    )) . chunksOf 5000 . map (calcIdx psVec p) $ idxs
-             UV.unsafeFreeze mv
-           rVec = foldl1 (UV.zipWith (+)) $ runPar $ parMap (onCore vVec') [0..numCapabilities - 1]
-           
-       forM_ [0..kPairs-1] $ \idx -> do
-         e <- UMV.unsafeRead tmv idx
-         UMV.unsafeWrite tmv idx (e + UV.unsafeIndex rVec idx)
-         
-     uv <- UV.unsafeFreeze tmv
-     let csum = UV.postscanr' (+) 0 uv      
-         fdrVec = trace (show $ UV.sum uv) $
-                  UV.imap
-                  (\i e ->
-                    fromIntegral e /
-                    fromIntegral ((kPairs-i)*nPerm)) csum
-         pVec = UV.map ((/ (0.5 * (fromIntegral (nPerm * p * (p-1))))) . fromIntegral) csum
-     result <- liftM UV.reverse $ UV.generateM kPairs $ \k -> 
-       let idx@(i,j) = UV.unsafeIndex gpVec k
-           cor = UV.unsafeIndex tCorVec k
-           fdr = UV.unsafeIndex fdrVec k
-           p = UV.unsafeIndex pVec k
-       in return (i,j,cor,p,fdr)
-     return (result,tCors)
+      t = p * (p-1) `quot` 2
+      rVec = runPar $
+             foldM
+             (\acc permVec ->
+               let vVec' = V.fromList $
+                           --                   toStdScores nTrue $
+                           toSlices n $
+                           UV.concat $
+                           map (flip UV.unsafeBackpermute permVec) $
+                           V.toList vVec
+                   (x,y) = if odd p
+                           then (p,(p-1) `quot` 2)
+                           else (p-1,p `quot` 2)
+               in do
+                 rV <- parMapReduceRangeThresh 1 (InclusiveRange 0 (x-1))
+                       (\i ->
+                         let is = take y [i*y..]
+                         in return . UV.fromList .
+                            countBy tCorVec .
+                            dropWhile (<= minCor) . sort .
+                            map ((\(a,b) ->
+                                   abs $
+                                   tCorV2 nTrue
+                                   (V.unsafeIndex vVec' a)
+                                   (V.unsafeIndex vVec' b)
+                                 ) . (calcIdx psVec p)) $ is)
+                       (\a b -> return $ UV.zipWith (+) a b)
+                       (UV.replicate kPairs 0)
+                 return $! UV.zipWith (+) acc rV
+             ) (UV.replicate kPairs 0) ls
+      csum = UV.postscanr' (+) 0 rVec      
+      fdrVec = trace (show $ UV.sum rVec) $
+               UV.imap
+               (\i e ->
+                 fromIntegral e /
+                 fromIntegral ((kPairs-i)*nPerm)) csum
+      pVec = UV.map ((/ fromIntegral (nPerm * t)) . fromIntegral) csum
+      result = UV.reverse $
+               UV.generate kPairs $
+               (\k -> 
+                 let idx@(i,j) = UV.unsafeIndex gpVec k
+                     cor = UV.unsafeIndex tCorVec k
+                     fdr = UV.unsafeIndex fdrVec k
+                     p = UV.unsafeIndex pVec k
+                 in (i,j,cor,p,fdr))
+  in (result,tCors)
+
 
 
 
@@ -228,21 +230,22 @@ tmiCorV2 seed nPerm kPairs (GD p n _data) label' = assert (n == GV.length label'
       nFalse = n - nTrue
       label = UV.fromList $ replicate nTrue True ++ 
               replicate nFalse False
-      vVec = V.fromList $
-             map
-             (\v -> runST $ do
-                 let v1 = UV.slice 0 nTrue v
-                     v2 = UV.slice nTrue nFalse v 
-                     (m1,var1) = meanVarianceUnb v1 
-                     (m2,var2) = meanVarianceUnb v2
-                 mv <- UV.unsafeThaw v
-                 forM_ [0..n-1] $ \idx -> do
-                   e <- UMV.unsafeRead mv idx
-                   if idx < nTrue
-                     then UMV.unsafeWrite mv idx ((e-m1) / sqrt var1)
-                     else UMV.unsafeWrite mv idx ((e-m2) / sqrt var2)
-                 UV.unsafeFreeze mv
-             ) $ toSlices n $ recomb n label' _data
+      vVec = V.fromList $ toStdScores nTrue $
+             -- map
+             -- (\v -> runST $ do
+             --     let v1 = UV.slice 0 nTrue v
+             --         v2 = UV.slice nTrue nFalse v 
+             --         (m1,var1) = meanVarianceUnb v1 
+             --         (m2,var2) = meanVarianceUnb v2
+             --     mv <- UV.unsafeThaw v
+             --     forM_ [0..n-1] $ \idx -> do
+             --       e <- UMV.unsafeRead mv idx
+             --       if idx < nTrue
+             --         then UMV.unsafeWrite mv idx ((e-m1) / sqrt var1)
+             --         else UMV.unsafeWrite mv idx ((e-m2) / sqrt var2)
+             --     UV.unsafeFreeze mv
+             -- ) $
+             toSlices n $ recomb n label' _data
       hs = kLargestV2 nTrue kPairs vVec
       (gps,tCors) = unzip hs
       gpVec = UV.fromList gps
@@ -417,6 +420,17 @@ collect gmv tCorVec = go 1
         n <- GMV.unsafeRead gmv (idx-1)
         GMV.unsafeWrite gmv (idx-1) (n + length vs1)
         go (idx+1) vs2
+        
+countBy :: UV.Vector Double -> [Double] -> [Int]
+countBy v = go 0
+  where 
+    v' = UV.tail v
+    n = UV.length v'
+    go idx ds | idx < n =
+      let (ds1,ds2) = break (> t) ds
+          t = abs $ UV.unsafeIndex v' idx
+      in length ds1 : go (idx+1) ds2
+              | otherwise = [length ds]
 
 
 tCorStdedV2 :: (GV.Vector v1 Double

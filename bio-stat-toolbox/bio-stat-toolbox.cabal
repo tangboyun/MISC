@@ -23,6 +23,7 @@ library
                        vector ==0.10.*,
                        statistics ==0.10.*,
                        mwc-random ==0.12.*,
-                       heaps,split
+                       heaps,split,monad-par,
+                       monad-par-extras
   ghc-options:
     -Wall -O2 -threaded -rtsopts -fllvm -optl-O3  

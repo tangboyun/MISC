@@ -17,13 +17,13 @@ import           Control.Monad
 import           Control.Monad.ST.Strict
 import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as GMV
-import qualified Data.Vector.Unboxed as UV
-import qualified Data.Vector.Unboxed.Mutable as UMV
 
 import           Statistics.Sample
 import           System.Random.MWC
 
 
+-- | Split the vector in two parts, the first one containing those elements that
+-- are true in the bool vec and the second one those false. The order of the elements is not preserved
 ipartition' :: (GV.Vector v1 a
               ,GV.Vector v2 Bool) --,v1 ~ v2)
             => v1 a -> v2 Bool
@@ -48,7 +48,8 @@ ipartition' vec boolVec | GV.length vec == GV.length boolVec =
     v2 <- GV.unsafeFreeze $ GMV.slice l (n-l) mv
     return (v1,v2)
                         | otherwise = error "ipartition': input vec did not have equal length."
-                                      
+
+-- | The order of the elements is preserved
 ipartition :: (GV.Vector v1 a
              ,GV.Vector v2 Bool) --v1 ~ v2)
            => v1 a -> v2 Bool
@@ -62,27 +63,29 @@ ipartition vec boolVec =
     v2' <- GV.unsafeFreeze mv2
     return (v1,v2')
 
-permute :: (UV.Unbox a,GV.Vector v1 a) => Seed -> Int -> v1 a -> ([UV.Vector a],Seed)
-{-# INLINABLE permute #-}
+permute :: GV.Vector v a => Seed -> Int -> v a -> ([v a],Seed)
 permute s n vec =
   let l = GV.length vec
-      v = UV.generate t (\idx -> GV.unsafeIndex vec (idx `mod` l))
+      v = GV.concat $ replicate n vec
       t = n * l
       end = l - 1
   in runST $ do
-    mv <- UV.unsafeThaw v
+    mv <- GV.unsafeThaw v
     gen <- restore s
             
     forM_ [0..t-1] $ \idx -> do
       let (c,r) = idx `divMod` l
           i = c * l
       i' <- uniformR (r,end) gen
-      UMV.unsafeSwap mv idx (i+i') 
+      GMV.unsafeSwap mv idx (i+i') 
 
-    v' <- UV.unsafeFreeze mv
+    v' <- GV.unsafeFreeze mv
     s' <- save gen
-    return (map ((\i -> UV.unsafeSlice i l v').(*l)) [0..n-1] ,s')
-    
+    return (map ((\i -> GV.unsafeSlice i l v').(*l)) [0..n-1] ,s')
+{-# INLINABLE permute #-}
+
+
+
 pcc :: (GV.Vector v1 Double
       ,GV.Vector v2 Double
       ,v1 ~ v2)

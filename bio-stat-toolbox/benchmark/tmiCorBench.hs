@@ -4,9 +4,8 @@ import System.Random.MWC
 import Bio.Statistics.Interaction.TMIcor
 import Control.Monad.ST (runST)
 import qualified Data.Vector.Unboxed as UV
-import qualified Data.Vector.Generic as GV
 
-testData :: Int -> Int -> (GData UV.Vector,UV.Vector Bool,Seed)
+testData :: Int -> Int -> (GData,UV.Vector Bool,Seed)
 testData n p =
   runST $ do
     gen <- create
@@ -17,15 +16,10 @@ testData n p =
     
 main :: IO ()
 main = do
-  let (gD,label,s) = testData 50 100
-      re = fst $ tmiCorV1 s 100 100 gD label
-      re2 = fst $ tmiCorV2 s 100 100 gD label
-      re3 = fst $ tmiCorV3 s 100 100 gD label
-  print $
---    and $ zipWith (==) re2 $
-    re3
-  
+  let dat = testData 50 100
+  print $ f dat
   -- defaultMain
-  --  [bench "tmiCor" $ whnf f (testData 100 10000)]
-  -- where
-  --   f = \(gD,label,s) -> tmiCor s 1000 2000 gD label
+  --   [bench "tmiCor" $ nf f dat ]
+ where
+   f = \(gD,label,s) ->
+     fst $ tmiCor s 100 100 gD label

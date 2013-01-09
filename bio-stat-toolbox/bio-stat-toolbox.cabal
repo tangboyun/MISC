@@ -14,16 +14,13 @@ cabal-version:       >=1.8
 library 
   hs-source-dirs:      src
   exposed-modules:     Bio.Statistics.Interaction.TMIcor
-                       Bio.Statistics.Util
-  -- other-modules:       
+
+  other-modules:       Bio.Statistics.Interaction.TMIcor.Internal
   build-depends:       base ==4.6.*, 
-                       primitive ==0.5.*,
-                       parallel ==3.2.*, 
-                       hashtables ==1.0.*,
                        vector ==0.10.*,
-                       statistics ==0.10.*,
                        mwc-random ==0.12.*,
-                       heaps,split,monad-par,
-                       monad-par-extras
+                       monad-par,
+                       monad-par-extras,
+                       deepseq
   ghc-options:
-    -Wall -O2 -threaded -rtsopts -fllvm -optl-O3  
+    -Wall -O2 -fllvm -optl-O3  

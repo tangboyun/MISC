@@ -164,3 +164,44 @@ vecFastVarImpl vv =
     return (mvec,vvec)
 {-# INLINABLE vecFastVarImpl #-}
 
+-- | Split the vector in two parts, the first one containing those elements that
+-- are true in the bool vec and the second one those false. The order of the elements is not preserved
+ipartition' :: (GV.Vector v1 a
+              ,GV.Vector v2 Bool) --,v1 ~ v2)
+            => v1 a -> v2 Bool
+            -> (v1 a, v1 a)
+{-# INLINABLE ipartition' #-}            
+ipartition' vec boolVec | GV.length vec == GV.length boolVec =
+  let n = GV.length vec
+  in runST $ do
+    mv <- GMV.unsafeNew n
+    (_,l,_) <- GV.foldM'
+               (\(idx,i,j) e ->
+                 let !idx' = idx + 1
+                 in if e
+                    then let !i' = i + 1
+                         in GMV.unsafeWrite mv i (GV.unsafeIndex vec idx) >>
+                            return (idx',i',j)
+                    else let !j' = j - 1
+                         in GMV.unsafeWrite mv j (GV.unsafeIndex vec idx) >>
+                            return (idx',i,j')
+               ) (0,0,n-1) boolVec
+    v1 <- GV.unsafeFreeze $ GMV.slice 0 l mv
+    v2 <- GV.unsafeFreeze $ GMV.slice l (n-l) mv
+    return (v1,v2)
+                        | otherwise = error "ipartition': input vec did not have equal length."
+
+-- | The order of the elements is preserved
+ipartition :: (GV.Vector v1 a
+             ,GV.Vector v2 Bool) --v1 ~ v2)
+           => v1 a -> v2 Bool
+           -> (v1 a, v1 a)
+{-# INLINABLE ipartition #-}           
+ipartition vec boolVec =
+  let (v1,v2) = ipartition' vec boolVec
+  in runST $ do
+    mv2 <- GV.unsafeThaw v2
+    GMV.reverse mv2
+    v2' <- GV.unsafeFreeze mv2
+    return (v1,v2')
+

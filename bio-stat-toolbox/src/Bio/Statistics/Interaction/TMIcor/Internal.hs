@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns,RankNTypes,FlexibleContexts,TypeFamilies,PatternGuards #-}
+{-# LANGUAGE RankNTypes,FlexibleContexts,TypeFamilies,PatternGuards #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -112,7 +112,7 @@ count e vec = go 0 0
 
 {-# INLINE calcIdx #-}
 calcIdx :: UV.Vector Int -> Int -> (Int,Int)
-calcIdx vec !idx =
+calcIdx vec idx =
   let i = getI
       j = getJ i
   in (i,j)
@@ -185,8 +185,8 @@ tCorStded :: (GV.Vector v1 Double
           => Int -> v1 Double -> v2 Double -> Double
 {-# INLINE tCorStded #-}             
 tCorStded nTrue vi vj =
-  let (!v1i,!v2i) = GV.splitAt nTrue vi
-      (!v1j,!v2j) = GV.splitAt nTrue vj
+  let (v1i,v2i) = GV.splitAt nTrue vi
+      (v1j,v2j) = GV.splitAt nTrue vj
   in atanh (pccStded v1i v1j) -
      atanh (pccStded v2i v2j)
 

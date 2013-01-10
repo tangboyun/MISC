@@ -46,10 +46,10 @@ tmiCor :: Seed -- ^ initial random seed
          -> GData -- ^ vector of gene chip
          -> UV.Vector Bool -- ^ label for each sample
          -> (Result,Seed)
-{-# INLINABLE tmiCor #-}       
 tmiCor seed nPerm kPairs (GD p n _data) label' =
   let nTrue = count True label'
-      vVec = V.fromList $ toStdScores nTrue $ toSlices n $ recomb n label' _data
+      vVec = V.fromList $! toStdScores nTrue $
+             toSlices n $ recomb n label' _data
       hs = kLargest nTrue kPairs vVec
       (gps,tCors) = unzip hs
       gpVec = UV.fromList gps
@@ -62,7 +62,7 @@ tmiCor seed nPerm kPairs (GD p n _data) label' =
       rVec = runPar $
              parMapReduceRangeThresh 1 (InclusiveRange 0 (nPerm - 1))
              (\pIdx ->
-               let vVec' = V.fromList $
+               let vVec' = V.fromList $!
                            toStdScores nTrue $
                            toSlices n $
                            UV.concat $
@@ -104,7 +104,3 @@ tmiCor seed nPerm kPairs (GD p n _data) label' =
                      pValue = pVec `atUV` k
                  in (i,j,cor,pValue,fdr))
   in (result,seed')
-
-       
-
-

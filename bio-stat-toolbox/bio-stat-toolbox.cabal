@@ -16,11 +16,11 @@ library
   exposed-modules:     Bio.Statistics.Interaction.TMIcor
 
   other-modules:       Bio.Statistics.Interaction.TMIcor.Internal
-  build-depends:       base ==4.6.*, 
-                       vector ==0.10.*,
-                       mwc-random ==0.12.*,
+  build-depends:       base >=4.6, 
+                       vector >=0.10,
+                       mwc-random,
                        monad-par,
                        monad-par-extras,
-                       deepseq
+                       deepseq,parallel
   ghc-options:
-    -Wall -O2 -fllvm -optl-O3  
+    -Wall -O3 -fllvm -optl-O3  

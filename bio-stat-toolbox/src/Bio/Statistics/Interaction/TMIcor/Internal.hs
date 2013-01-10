@@ -20,6 +20,7 @@ import           Control.Monad
 import           Control.Monad.Par.Combinator
 import           Control.Monad.Par.Scheds.Direct
 import           Control.Monad.ST.Strict
+import           Control.Parallel.Strategies
 import           Data.Function
 import           Data.List
 import qualified Data.Vector as V
@@ -28,7 +29,6 @@ import qualified Data.Vector.Generic.Mutable as GMV
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector.Unboxed.Mutable as UMV
 import           System.Random.MWC
-import Control.Parallel.Strategies
 
 
 newtype TCor = TCor

@@ -119,7 +119,7 @@ sampleStr (Setting _ rna spec _) =
       \# Column $snBeg$, $snEnd$: Normalized intensity of each sample (log2 transformed).\n"
 
 relationStr s = 
-  "# Columns $relaBeg$ ~ $relaEnd$: the relationship of lncRNA and its nearby coding gene and the coordinate of the coding gene, \
+  "# Columns $relaBeg$ ~ $relaEnd$: the relationship of LncRNA and its nearby coding gene and the coordinate of the coding gene, \
   \including relationship, Associated_gene_acc, Associated_gene_name, Associated_gene_strand, Associated_gene_start, Associated_gene_end.\n" ++ 
   relaSpecific
   where
@@ -136,7 +136,7 @@ relationStr s =
         \or there are non-overlapping coding transcripts transcribed head to head with their TSSs separated by more than 1 kb.\n"
       Mouse ->
         "\"sense overlap\": the LncRNA's exon is overlapping a coding transcript exon on the same genomic strand;\n\
-        \\"antisense overlap\": the lncRNA is transcribed from the antisense strand and overlapping with a coding transcript;\n\
+        \\"antisense overlap\": the LncRNA is transcribed from the antisense strand and overlapping with a coding transcript;\n\
         \\"bidirectional\": the LncRNA is oriented head to head to a coding transcript within 1000 bp;\n\
         \\"intergenic\": there are no overlapping or bidirectional coding transcripts nearby the LncRNA.\n"
       Human ->
@@ -166,8 +166,12 @@ sourceStr s =
           \UCR: \"ultra-conserved region\" among human, mouse and rat (http://users.soe.ucsc.edu/~jill/ultra.html);\n\
           \lincRNA: lincRNA identified by John Rinn's group (Guttman et al. 2009; Khalil et al. 2009);\n\
           \misc_LncRNA: other sources."
-    humanSource = "H-invDB: H-invDB (http://www.h-invitational.jp/);\n"
-    mouseSource = "Fantom: Fantom project (http://fantom.gsc.riken.jp/);\n"
+    humanSource = "H-invDB: H-invDB (http://www.h-invitational.jp/);\n\
+                  \HOX cluster: The term Hox cluster refers to a group of clustered homeobox genes, named Hox genes in vertebrates.\n\
+                  \LncRNAdb: LncRNAdb (http://www.lncrnadb.org/).\n"
+    mouseSource = "Fantom3: Fantom project (http://fantom.gsc.riken.jp/);\n\
+                  \NRON_ncRNA: ncRNAs from paper \"A Strategy for Probing the Function of Noncoding RNAs Finds a Repressor of NFAT\",\
+                  \Science (2005) 309:1570-1573.\n"
     ratSource = "RefSeq_NR: RefSeq validated non-coding RNA;\n\
                 \RefSeq_XR: RefSeq un-validated non-coding RNA;\n\
                 \mouse_ortholog: rat LncRNAs which are obtained by sequence comparison with mouse LncRNAs;\n\

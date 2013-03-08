@@ -13,6 +13,14 @@
 #+OPTIONS: H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
 #+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 * 版本说明
+** Version 0.1.0.22
+   人lncRNA芯片表头注释部分添加：
+   * HOX cluster: The term Hox cluster refers to a group of clustered homeobox genes, named Hox genes in vertebrates.
+   * LncRNAdb: LncRNAdb (http://www.lncrnadb.org/).
+** Version 0.1.0.21
+   小鼠lncRNA芯片表头注释部分修改:
+   1. Fantom -> Fantom3
+   2. 添加NRON\_ncRNA的注释说明
 ** Version 0.1.0.20
    修改表头注释背景颜色为rgb 255 255 156 (与其他脚本保持一致)
 ** Version 0.1.0.19

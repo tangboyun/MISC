@@ -1,5 +1,5 @@
-name:                ExpReporter
-version:             0.1.0.20
+Name:                ExpReporter
+version:             0.1.0.22
 synopsis:            Expression Profiling Reporter
 description:         Convert the .txt file exported by GeneSpring into an Excel Report.
 license:             BSD3
@@ -10,7 +10,7 @@ copyright:           Boyun Tang
 category:            Bioinformatics
 build-type:          Simple
 cabal-version:       >=1.8
-
+Data-Files:          doc/README.pdf
 executable ExpReporter
   main-is:             ExpReporter.hs
   other-modules:       Report.GUI.Layout

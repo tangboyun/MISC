@@ -17,9 +17,11 @@ testData n p =
 main :: IO ()
 main = do
   let dat = testData 50 100
-  print $ f dat
-  -- defaultMain
-  --   [bench "tmiCor" $ nf f dat ]
+      v1 = f dat
+      
+--  print $ and $ map ((\v -> UV.and $ UV.zipWith (==) v1 v) .f) (replicate 10000 dat)
+  defaultMain
+     [bench "tmiCor" $ nf f dat ]
  where
    f = \(gD,label,s) ->
      fst $ tmiCor s 100 100 gD label

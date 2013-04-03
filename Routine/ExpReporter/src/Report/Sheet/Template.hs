@@ -120,7 +120,7 @@ sampleStr (Setting _ rna spec _) =
 
 relationStr s = 
   "# Columns $relaBeg$ ~ $relaEnd$: the relationship of LncRNA and its nearby coding gene and the coordinate of the coding gene, \
-  \including relationship, Associated_gene_acc, Associated_gene_name, Associated_gene_strand, Associated_gene_start, Associated_gene_end.\n" ++ 
+  \including relationship, Associated_gene_acc, Associated_gene_name, Associated_protein_name, Associated_gene_strand, Associated_gene_start, Associated_gene_end.\n" ++ 
   relaSpecific
   where
     relaSpecific = case s of

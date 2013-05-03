@@ -180,7 +180,7 @@ toStr i =
   let ls = ['A'..'Z']
       (x,y) = i `divMod` 26
   in if x > 0
-     then B8.cons' (ls !! (x-1)) $! B8.singleton $! ls !! y
+     then B8.cons (ls !! (x-1)) $! B8.singleton $! ls !! y
      else B8.singleton $! ls !! i
           
 

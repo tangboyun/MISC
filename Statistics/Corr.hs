@@ -19,9 +19,11 @@ import qualified Data.Vector.Unboxed.Mutable as UVM
 import Data.Vector.Algorithms.Merge
 import Control.Monad.ST
 import Data.Function
+import           Statistics.Distribution
+import           Statistics.Distribution.StudentT
 
 -- | Fractional ranking with ties. See http://en.wikipedia.org/wiki/Ranking
-rank :: (UV.Unbox a,Ord a) => UV.Vector a -> UV.Vector Double
+rank :: (UV.Unbox a,Ord a,UV.Unbox b,Enum b,Floating b) => UV.Vector a -> UV.Vector b
 {-# INLINE rank #-}
 rank v =
     let v2 = UV.indexed v
@@ -39,7 +41,7 @@ rank v =
         return (UV.unsafeBackpermute r idxV')
   where
     {-# INLINE go #-}
-    go vec mv i =
+    go vec mv !i =
         if i >= UV.length vec
         then return ()
         else let n = countHead (UV.drop i vec)
@@ -51,7 +53,7 @@ rank v =
     countHead vec =
         1 + checkHead 0 (UV.tail vec)
       where
-        checkHead i tV =
+        checkHead !i tV =
             if UV.unsafeIndex tV i == UV.unsafeIndex vec 0 &&
                i < UV.length vec
             then checkHead (i+1) tV
@@ -75,3 +77,10 @@ corFast vec1 vec2 =
             y = UV.unsafeIndex vec2 i
         in go (accX + x) (accY + y) (accX2 + x*x) (accY2+y*y) (accXY+x*y) (i+1)
                                            | otherwise = (accX,accY,accX2,accY2,accXY)
+
+corTest :: (Real a,Floating a) => Int -> a -> a
+{-# INLINE corTest #-}
+corTest n r =
+    let t = r * sqrt ((fromIntegral n - 2) / (1 - r * r))
+        dis = studentT (fromIntegral n - 2)
+    in realToFrac $ 2 * cumulative dis (realToFrac $ negate $ abs t)
